@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Package, MapPin, Clock, Shield, ArrowLeft } from 'lucide-react';
+import { Package, MapPin, Clock, Shield, ArrowLeft, Brain } from 'lucide-react';
 import BrandLogo from '../../components/common/BrandLogo';
 
 export default function Landing() {
   const features = [
-    { icon: <Package size={28} />, title: 'توصيل سريع', desc: 'نوصل طلباتك في أسرع وقت ممكن' },
-    { icon: <MapPin size={28} />, title: 'تغطية واسعة', desc: 'نخدم جميع مناطق المحافظة' },
-    { icon: <Clock size={28} />, title: 'طوال اليوم', desc: 'متاحون على مدار الساعة' },
+    { icon: <Package size={28} />, title: 'طول اليوم متاحون الا أوقات الصلاه', desc: '' },
+    { icon: <MapPin size={28} />, title: 'صلى على النبى محمد', desc: '  مشاء الله' },
+    { icon: <Brain size={28} />, title: ' متفكريش كتير', desc: '' },
     { icon: <Shield size={28} />, title: 'آمن وموثوق', desc: 'الموقع غير مسئول عن التعامل خارج الموقع' },
   ];
 
@@ -18,7 +18,7 @@ export default function Landing() {
         <div className="relative max-w-6xl mx-auto px-4 py-20 text-center">
           <BrandLogo size="lg" className="mx-auto mb-6 border-white/25 shadow-[0_12px_36px_rgba(0,0,0,0.35)]" />
           <h1 className="text-4xl md:text-6xl font-bold mb-4">بكليك</h1>
-          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">أسهل وأسرع طريقة لتوصيل مشترياتك وطلباتك إلى باب منزلك</p>
+          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">اسهل شحن سريع واسرع طريقه التوصيل مشتريات وطلبات الى منزلك</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register" className="bg-white text-primary-600 font-bold py-3 px-8 rounded-xl hover:bg-gray-100 transition-all shadow-lg">إنشاء حساب</Link>
             <Link to="/login" className="bg-white/20 backdrop-blur text-white font-bold py-3 px-8 rounded-xl hover:bg-white/30 transition-all">تسجيل الدخول</Link>

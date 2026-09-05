@@ -6,9 +6,12 @@ import { ChevronLeft, ChevronRight, MapPin, Package, ShoppingCart, Tag, CheckCir
 import toast from 'react-hot-toast';
 
 // Auto-generate store emojis from min_places + is_open_ended
-const buildEmoji = (minPlaces, isOpenEnded) => {
+const buildHomeIcons = (minPlaces, isOpenEnded) => {
   const count = Math.min(parseInt(minPlaces) || 1, 5);
-  return '🏪'.repeat(count) + (isOpenEnded ? '+' : '');
+  return <span className="inline-flex items-center gap-0.5 text-primary-500" aria-label={`${count} أماكن`}>
+    {Array.from({ length: count }, (_, index) => <Home key={index} size={22} strokeWidth={2.2} />)}
+    {isOpenEnded && <span className="text-xl font-bold leading-none">+</span>}
+  </span>;
 };
 
 const emptyPlaceDetail = () => ({ name: '', description: '' });
@@ -423,7 +426,7 @@ export default function CreateOrder() {
                       : 'hover:border-primary-200 dark:hover:border-primary-800'
                   }`}
                 >
-                  <span className="text-2xl leading-none flex-shrink-0">{buildEmoji(option.min_places, option.is_open_ended)}</span>
+                  <span className="leading-none flex-shrink-0">{buildHomeIcons(option.min_places, option.is_open_ended)}</span>
                   <div className="flex-1 text-right">
                     <p className="font-bold text-gray-900 dark:text-white">{option.label_ar}</p>
                     <p className="text-sm text-primary-600 dark:text-primary-400 font-semibold mt-0.5">
@@ -637,7 +640,10 @@ export default function CreateOrder() {
               </h4>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600 dark:text-gray-300">
-                  {buildEmoji(selectedPlacesOption.min_places, selectedPlacesOption.is_open_ended)} {selectedPlacesOption.label_ar}
+                  <span className="inline-flex items-center gap-2 align-middle">
+                    {buildHomeIcons(selectedPlacesOption.min_places, selectedPlacesOption.is_open_ended)}
+                    {selectedPlacesOption.label_ar}
+                  </span>
                 </span>
                 <span className="text-sm font-bold text-primary-600">
                   {form.places_fee === 0 ? 'بدون رسوم إضافية' : `+ ${form.places_fee} ج.م`}

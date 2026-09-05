@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { Plus, Trash2, Save, X, Store, Edit2, ToggleLeft, ToggleRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Save, X, Store, Home, Edit2, ToggleLeft, ToggleRight, ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const emptyOption = () => ({
@@ -12,10 +12,13 @@ const emptyOption = () => ({
   is_active: true,
 });
 
-// Generate store emojis based on min_places and open-ended flag
-const buildEmoji = (minPlaces, isOpenEnded) => {
+// Generate home icons based on min_places and open-ended flag
+const buildHomeIcons = (minPlaces, isOpenEnded) => {
   const count = Math.min(parseInt(minPlaces) || 1, 5);
-  return '🏪'.repeat(count) + (isOpenEnded ? '+' : '');
+  return <span className="inline-flex items-center gap-0.5 text-primary-500" aria-label={`${count} أماكن`}>
+    {Array.from({ length: count }, (_, index) => <Home key={index} size={20} strokeWidth={2.2} />)}
+    {isOpenEnded && <span className="text-lg font-bold leading-none">+</span>}
+  </span>;
 };
 
 export default function AdminPlaceOptions() {
@@ -184,7 +187,7 @@ export default function AdminPlaceOptions() {
                 <div className={`card flex items-center gap-4 transition-all ${!opt.is_active ? 'opacity-50' : ''}`}>
                   {/* Emoji preview */}
                   <span className="text-xl flex-shrink-0 leading-none">
-                    {buildEmoji(opt.min_places, opt.is_open_ended)}
+                    {buildHomeIcons(opt.min_places, opt.is_open_ended)}
                   </span>
 
                   {/* Info */}
@@ -312,7 +315,7 @@ function OptionForm({ form, setForm }) {
 
       {/* Preview */}
       <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-xl">
-        <span className="text-2xl">{form.min_places ? '🏪'.repeat(Math.min(parseInt(form.min_places) || 1, 5)) : '🏪'}</span>
+        <span>{buildHomeIcons(form.min_places || 1, form.is_open_ended)}</span>
         {form.is_open_ended && <span className="text-lg font-bold text-gray-500">+</span>}
       </div>
 
