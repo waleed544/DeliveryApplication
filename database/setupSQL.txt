@@ -1,0 +1,266 @@
+-- ============================================================
+-- setup.sql
+-- Run ONCE after schema.sql
+--
+-- Creates:
+--   Admin
+--   Customer
+--   Driver
+--   Driver profile
+--
+-- Safe to re-run.
+-- Existing users/profiles will not be duplicated.
+-- ============================================================
+
+BEGIN;
+
+-- ============================================================
+-- 1. Enable pgcrypto for bcrypt password hashing
+-- ============================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- ============================================================
+-- 2. Verify required tables exist
+-- ============================================================
+
+DO $$
+DECLARE
+    missing_tables TEXT;
+BEGIN
+    SELECT string_agg(required_table, ', ')
+    INTO missing_tables
+    FROM (
+        VALUES
+            ('users'),
+            ('customers'),
+            ('drivers'),
+            ('vehicles'),
+            ('locations'),
+            ('pricing_settings')
+    ) AS t(required_table)
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = t.required_table
+    );
+
+    IF missing_tables IS NOT NULL THEN
+        RAISE EXCEPTION
+            'Missing required tables: %. Run schema.sql first.',
+            missing_tables;
+    END IF;
+END $$;
+
+-- ============================================================
+-- 3. Verify motorcycle vehicle exists
+-- ============================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM vehicles
+        WHERE type = 'motorcycle'
+    ) THEN
+        RAISE EXCEPTION
+            'No motorcycle vehicle found. Run schema.sql first.';
+    END IF;
+END $$;
+
+-- ============================================================
+-- 4. ADMIN
+-- ============================================================
+
+INSERT INTO users (
+    phone,
+    email,
+    password_hash,
+    name,
+    role,
+    is_active
+)
+VALUES (
+    '01000000000',
+    'admin@delivery.com',
+    crypt('admin123', gen_salt('bf', 10)),
+    'System Admin',
+    'admin',
+    true
+)
+ON CONFLICT (phone) DO NOTHING;
+
+-- ============================================================
+-- 5. CUSTOMER
+-- ============================================================
+
+INSERT INTO users (
+    phone,
+    email,
+    password_hash,
+    name,
+    role,
+    is_active
+)
+VALUES (
+    '01011111111',
+    'customer@example.com',
+    crypt('customer123', gen_salt('bf', 10)),
+    'Ahmed Customer',
+    'customer',
+    true
+)
+ON CONFLICT (phone) DO NOTHING;
+
+-- Create customer profile if it doesn't exist
+INSERT INTO customers (
+    user_id,
+    default_address
+)
+SELECT
+    u.id,
+    'Tanta, El Gharbia'
+FROM users u
+WHERE u.phone = '01011111111'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM customers c
+      WHERE c.user_id = u.id
+  );
+
+-- ============================================================
+-- 6. DRIVER USER
+-- ============================================================
+
+INSERT INTO users (
+    phone,
+    email,
+    password_hash,
+    name,
+    role,
+    is_active
+)
+VALUES (
+    '01022222222',
+    'driver@example.com',
+    crypt('driver123', gen_salt('bf', 10)),
+    'Mohamed Driver',
+    'driver',
+    true
+)
+ON CONFLICT (phone) DO NOTHING;
+
+-- ============================================================
+-- 7. DRIVER PROFILE
+-- ============================================================
+
+INSERT INTO drivers (
+    user_id,
+    vehicle_id,
+    vehicle_plate,
+    national_id,
+    is_approved,
+    availability_status
+)
+SELECT
+    u.id,
+    v.id,
+    'م ن ا 1234',
+    '12345678901234',
+    true,
+    'available'
+FROM users u
+CROSS JOIN LATERAL (
+    SELECT id
+    FROM vehicles
+    WHERE type = 'motorcycle'
+    ORDER BY created_at
+    LIMIT 1
+) v
+WHERE u.phone = '01022222222'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM drivers d
+      WHERE d.user_id = u.id
+  );
+
+-- ============================================================
+-- 8. Ensure existing driver is approved
+-- ============================================================
+
+UPDATE drivers
+SET
+    is_approved = true,
+    availability_status = 'available'
+WHERE user_id = (
+    SELECT id
+    FROM users
+    WHERE phone = '01022222222'
+)
+AND is_approved = false;
+
+-- ============================================================
+-- 9. Verification
+-- ============================================================
+
+DO $$
+DECLARE
+    admin_count INTEGER;
+    customer_count INTEGER;
+    driver_count INTEGER;
+    driver_profile_count INTEGER;
+BEGIN
+
+    SELECT COUNT(*)
+    INTO admin_count
+    FROM users
+    WHERE phone = '01000000000'
+      AND role = 'admin';
+
+    SELECT COUNT(*)
+    INTO customer_count
+    FROM users
+    WHERE phone = '01011111111'
+      AND role = 'customer';
+
+    SELECT COUNT(*)
+    INTO driver_count
+    FROM users
+    WHERE phone = '01022222222'
+      AND role = 'driver';
+
+    SELECT COUNT(*)
+    INTO driver_profile_count
+    FROM drivers d
+    JOIN users u ON u.id = d.user_id
+    WHERE u.phone = '01022222222'
+      AND d.is_approved = true;
+
+    IF admin_count = 0 THEN
+        RAISE EXCEPTION 'Admin setup failed.';
+    END IF;
+
+    IF customer_count = 0 THEN
+        RAISE EXCEPTION 'Customer setup failed.';
+    END IF;
+
+    IF driver_count = 0 THEN
+        RAISE EXCEPTION 'Driver user setup failed.';
+    END IF;
+
+    IF driver_profile_count = 0 THEN
+        RAISE EXCEPTION 'Driver profile setup failed.';
+    END IF;
+
+    RAISE NOTICE '==========================================';
+    RAISE NOTICE '        PROJECT SETUP COMPLETE';
+    RAISE NOTICE '==========================================';
+    RAISE NOTICE 'Admin    -> 01000000000 / admin123';
+    RAISE NOTICE 'Customer -> 01011111111 / customer123';
+    RAISE NOTICE 'Driver   -> 01022222222 / driver123';
+    RAISE NOTICE '==========================================';
+END $$;
+
+COMMIT;
+
