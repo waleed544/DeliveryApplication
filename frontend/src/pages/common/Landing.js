@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Package, MapPin, Clock, Shield, ArrowLeft, Brain } from 'lucide-react';
+import { Package, MapPin, Shield, ArrowLeft, Brain } from 'lucide-react';
 import BrandLogo from '../../components/common/BrandLogo';
 
 export default function Landing() {

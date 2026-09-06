@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api';
-import { Package, MapPin, Clock, ChevronLeft } from 'lucide-react';
+import { Package, MapPin, Clock } from 'lucide-react';
 
 export default function CustomerOrders() {
   const [orders, setOrders] = useState([]);

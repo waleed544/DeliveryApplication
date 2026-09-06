@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
-import { Package, MapPin, Phone, Eye, X } from 'lucide-react';
+import { Eye, X } from 'lucide-react';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);

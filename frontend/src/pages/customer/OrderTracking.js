@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import LiveMap from '../../components/common/LiveMap';
-import { MapPin, Phone, MessageCircle, Star, Truck, Clock, CheckCircle, Package, User, AlertCircle, Navigation, Receipt, ShoppingBag, ThumbsUp, ThumbsDown, Printer } from 'lucide-react';
+import { MapPin, Phone, MessageCircle, Truck, CheckCircle, Package, User, Navigation, Receipt, ShoppingBag, ThumbsUp, ThumbsDown, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function OrderTracking() {

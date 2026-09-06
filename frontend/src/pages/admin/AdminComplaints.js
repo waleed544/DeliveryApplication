@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { AlertTriangle, Star, MessageSquare, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { AlertTriangle, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminComplaints() {
