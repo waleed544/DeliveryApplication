@@ -105,13 +105,13 @@ export default function CreateOrder() {
   };
 
   // ── Items helpers ───────────────────────────────────────────────────────────
-  const addItem = () => setForm({ ...form, items: [...form.items, { name: '', quantity: 1, unit: 'piece', price: 0 }] });
-  const removeItem = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
-  const updateItem = (idx, field, value) => {
-    const updated = [...form.items];
-    updated[idx] = { ...updated[idx], [field]: value };
-    setForm({ ...form, items: updated });
-  };
+  // const addItem = () => setForm({ ...form, items: [...form.items, { name: '', quantity: 1, unit: 'piece', price: 0 }] });
+  // const removeItem = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
+  // const updateItem = (idx, field, value) => {
+  //   const updated = [...form.items];
+  //   updated[idx] = { ...updated[idx], [field]: value };
+  //   setForm({ ...form, items: updated });
+  // };
 
   // ── Pricing preview ─────────────────────────────────────────────────────────
   const previewPricing = async () => {
@@ -547,13 +547,13 @@ export default function CreateOrder() {
             )}
           </button>
 
-          {form.service_type === 'driver_purchase' && (
+          {/* {form.service_type === 'driver_purchase' && (
             <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-semibold text-gray-900 dark:text-white">المنتجات المطلوبة</h4>
                 <button onClick={addItem} className="text-sm text-primary-600 flex items-center gap-1"><Plus size={14} /> إضافة</button>
               </div>
-              {/* {form.items.map((item, idx) => (
+              {form.items.map((item, idx) => (
                 <div key={idx} className="card mb-2 space-y-2">
                   <div className="flex gap-2">
                     <input value={item.name} onChange={e => updateItem(idx, 'name', e.target.value)} className="input-field flex-1" placeholder="اسم المنتج" />
@@ -565,10 +565,10 @@ export default function CreateOrder() {
                     <input type="number" value={item.price} onChange={e => updateItem(idx, 'price', parseFloat(e.target.value))} className="input-field w-24" placeholder="السعر" />
                   </div>
                 </div>
-              ))} */}
+              ))}
               {form.items.length === 0 && <p className="text-sm text-gray-400 text-center py-4">يمكنك إضافة المنتجات لاحقاً أيضاً</p>}
             </div>
-          )}
+          )} */}
         </div>
       )}
 
