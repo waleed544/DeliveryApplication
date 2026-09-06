@@ -103,6 +103,7 @@ export default function CreateOrder() {
     updated[idx] = { ...updated[idx], [field]: value };
     setForm({ ...form, place_details: updated });
   };
+  
 
   // ── Items helpers ───────────────────────────────────────────────────────────
   // const addItem = () => setForm({ ...form, items: [...form.items, { name: '', quantity: 1, unit: 'piece', price: 0 }] });
