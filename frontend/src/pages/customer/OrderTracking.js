@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
@@ -23,7 +23,21 @@ export default function OrderTracking() {
   const geoWatchRef = useRef(null);
   const trackingOrderRef = useRef(null); // orderId currently joined for tracking
 
-  useEffect(() => { fetchOrder(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchOrder = useCallback(() => {
+  api.get(`/customers/orders/${id}`)
+    .then((r) => {
+      setOrder(r.data);
+      setLoading(false);
+    })
+    .catch(() => {
+      setLoading(false);
+    });
+}, [id]);
+
+ useEffect(() => {
+  fetchOrder();
+}, [fetchOrder]);
 
   // ── Fallback polling when socket disconnects ───────────────────────────────
   useEffect(() => {
@@ -34,7 +48,7 @@ export default function OrderTracking() {
     socket.on('connect',    stopPoll);
     if (!socket.connected) startPoll(); // already disconnected on mount
     return () => { stopPoll(); socket.off('disconnect', startPoll); socket.off('connect', stopPoll); };
-  }, [socket]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [socket, fetchOrder]);// eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Socket: real-time order status updates ────────────────────────────────
   useEffect(() => {
@@ -90,15 +104,15 @@ export default function OrderTracking() {
       socket.off('driver_location', handleDriverLocation);
       socket.off('estimate_received', handleEstimateReceived);
     };
-  }, [socket, id]);
+  }, [socket, id, fetchOrder]);
 
 
-    const fetchOrder = () => {
-    api.get(`/customers/orders/${id}`).then(r => {
-      setOrder(r.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  };
+  //   const fetchOrder = () => {
+  //   api.get(`/customers/orders/${id}`).then(r => {
+  //     setOrder(r.data);
+  //     setLoading(false);
+  //   }).catch(() => setLoading(false));
+  // };
 
   // ── Location sharing: join tracking room + watch own GPS ──────────────────
   useEffect(() => {
