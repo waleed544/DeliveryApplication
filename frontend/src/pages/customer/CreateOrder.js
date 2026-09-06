@@ -553,7 +553,7 @@ export default function CreateOrder() {
                 <h4 className="font-semibold text-gray-900 dark:text-white">المنتجات المطلوبة</h4>
                 <button onClick={addItem} className="text-sm text-primary-600 flex items-center gap-1"><Plus size={14} /> إضافة</button>
               </div>
-              {form.items.map((item, idx) => (
+              {/* {form.items.map((item, idx) => (
                 <div key={idx} className="card mb-2 space-y-2">
                   <div className="flex gap-2">
                     <input value={item.name} onChange={e => updateItem(idx, 'name', e.target.value)} className="input-field flex-1" placeholder="اسم المنتج" />
@@ -565,7 +565,7 @@ export default function CreateOrder() {
                     <input type="number" value={item.price} onChange={e => updateItem(idx, 'price', parseFloat(e.target.value))} className="input-field w-24" placeholder="السعر" />
                   </div>
                 </div>
-              ))}
+              ))} */}
               {form.items.length === 0 && <p className="text-sm text-gray-400 text-center py-4">يمكنك إضافة المنتجات لاحقاً أيضاً</p>}
             </div>
           )}
