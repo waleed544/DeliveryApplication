@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
-import { Eye, X } from 'lucide-react';
+import {  X } from 'lucide-react';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -66,9 +66,9 @@ export default function AdminOrders() {
                   <td className="py-3 text-sm font-bold text-primary-600">{order.final_total} ج.م</td>
                   <td className="py-3 text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString('ar-EG')}</td>
                   <td className="py-3 pl-4">
-                    <button onClick={() => api.get(`/admin/orders/${order.id}`).then(r => setSelectedOrder(r.data))} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                    {/* <button onClick={() => api.get(`/admin/orders/${order.id}`).then(r => setSelectedOrder(r.data))} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                       <Eye size={16} />
-                    </button>
+                    </button> */}
                   </td>
                 </tr>
               ))}
