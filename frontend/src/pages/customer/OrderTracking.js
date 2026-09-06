@@ -92,6 +92,14 @@ export default function OrderTracking() {
     };
   }, [socket, id]);
 
+
+    const fetchOrder = () => {
+    api.get(`/customers/orders/${id}`).then(r => {
+      setOrder(r.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  };
+
   // ── Location sharing: join tracking room + watch own GPS ──────────────────
   useEffect(() => {
     if (!order) return;
@@ -156,12 +164,7 @@ export default function OrderTracking() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchOrder = () => {
-    api.get(`/customers/orders/${id}`).then(r => {
-      setOrder(r.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  };
+
 
   const handleRate = async () => {
     if (rating === 0) { toast.error('اختر عدد النجوم أولاً'); return; }
