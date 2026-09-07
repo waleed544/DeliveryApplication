@@ -36,7 +36,6 @@ export default function CreateOrder() {
     //   name           → display name
     locations: [{ location_id: '', custom_address: '', name: '' }],
     items: [],
-    customer_phone: '',
     notes: '',
     promo_code: '',
     // ── New: Number of Places ──
@@ -150,7 +149,6 @@ export default function CreateOrder() {
       if (form.num_places === null) return false;
       return form.place_details.every(p => p.name.trim() !== '');
     }
-    if (step === 5) return form.customer_phone.trim() !== '';
     return true;
   };
 
@@ -163,8 +161,6 @@ export default function CreateOrder() {
       } else if (step === 3) {
         if (form.num_places === null) { toast.error('اختر عدد الأماكن'); return; }
         toast.error('أدخل اسم كل مكان');
-      } else if (step === 5) {
-        toast.error('أدخل رقم الهاتف');
       }
       return;
     }
@@ -187,7 +183,6 @@ export default function CreateOrder() {
         })),
         items: form.service_type === 'driver_purchase' ? form.items : [],
         customer_address,
-        customer_phone: form.customer_phone,
         notes: form.notes,
         promo_code: form.promo_code,
         // ── Places data ──
@@ -573,15 +568,10 @@ export default function CreateOrder() {
         </div>
       )}
 
-      {/* ── Step 5: Contact details ─────────────────────────────────────────── */}
+      {/* ── Step 5: Notes & Promo ───────────────────────────────────────────── */}
       {step === 5 && (
         <div className="space-y-4">
-          <h3 className="font-semibold text-gray-900 dark:text-white">تفاصيل التواصل</h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف للتواصل</label>
-            <input value={form.customer_phone} onChange={e => setForm({ ...form, customer_phone: e.target.value })}
-              className="input-field" placeholder="01XXXXXXXXX" required />
-          </div>
+          <h3 className="font-semibold text-gray-900 dark:text-white">ملاحظات وكوبون الخصم</h3>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات (اختياري)</label>
             <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}

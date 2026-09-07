@@ -18,7 +18,6 @@ router.post('/', async (req, res) => {
       locations,       // [{ location_id, custom_address, name }]
       items,
       customer_address,
-      customer_phone,
       notes,
       promo_code,
       num_places,      // number of shopping places (1-5+)
@@ -48,9 +47,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'يجب اختيار منطقة تسعير واحدة على الأقل' });
     }
 
-    const customerResult = await db.query('SELECT id FROM customers WHERE user_id = $1', [req.user.id]);
+    const customerResult = await db.query(
+      'SELECT c.id, u.phone FROM customers c JOIN users u ON c.user_id = u.id WHERE c.user_id = $1',
+      [req.user.id]
+    );
     if (customerResult.rows.length === 0) return res.status(404).json({ message: 'Customer not found' });
     const customerId = customerResult.rows[0].id;
+    const registeredPhone = customerResult.rows[0].phone; // always use account phone
 
     // Validate vehicle + get its type for surcharge calculation
     const vehicleResult = await db.query('SELECT type FROM vehicles WHERE id = $1', [vehicle_id]);
@@ -82,7 +85,7 @@ router.post('/', async (req, res) => {
         customerId, vehicle_id, service_type, numLocations,
         pricing.deliveryFee, pricing.serviceFee, pricing.itemsSubtotal,
         pricing.promoDiscount, pricing.finalTotal, pricing.driverEarnings, pricing.ownerEarnings,
-        customer_phone || '', customer_address || '', notes || null,
+        registeredPhone, customer_address || '', notes || null,
         parseInt(num_places) || 1,
         parseFloat(places_fee) || 0,
         JSON.stringify(place_details || [])

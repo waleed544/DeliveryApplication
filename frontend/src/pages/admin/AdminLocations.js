@@ -150,8 +150,9 @@ export default function AdminLocations() {
       {loading ? (
         <div className="card text-center py-12"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
       ) : (
-        <div className="card overflow-hidden p-0">
-          <table className="w-full text-sm">
+        <p className="text-xs text-gray-400 dark:text-gray-500 text-center sm:hidden mb-1">← اسحب يساراً لرؤية الإجراءات</p>
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full text-sm" style={{ minWidth: '520px' }}>
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
                 <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">المنطقة</th>
