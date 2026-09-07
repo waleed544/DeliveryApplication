@@ -339,11 +339,22 @@ export default function DriverOrders() {
     }
   };
 
-  // ── Status flow ───────────────────────────────────────────────────────────
-  const statusFlow = ['driver_accepted', 'going_to_location', 'arrived_at_location', 'items_collected', 'delivering', 'completed'];
+  // ── Status flows ───────────────────────────────────────────────────────────────────
+  const shoppingFlow  = ['driver_accepted', 'going_to_location', 'arrived_at_location', 'items_collected', 'delivering', 'completed'];
+  const deliveryFlow  = ['driver_accepted', 'going_to_pickup', 'arrived_at_pickup', 'delivering', 'completed'];
+  const statusFlow    = activeOrder?.service_type === 'delivery_service' ? deliveryFlow : shoppingFlow;
+
   const statusLabels = {
-    driver_accepted: 'قبول الطلب', going_to_location: 'في الطريق', arrived_at_location: 'وصل للموقع',
-    items_collected: 'تم جمع المنتجات', delivering: 'جاري التوصيل', completed: 'تم التسليم'
+    driver_accepted:      'قبول الطلب',
+    going_to_location:    'في الطريق',
+    arrived_at_location:  'وصل للموقع',
+    items_collected:      'تم جمع المنتجات',
+    // delivery_service labels
+    going_to_pickup:      'في الطريق للاستلام',
+    arrived_at_pickup:    'وصل لنقطة الاستلام',
+    // shared
+    delivering:           'جاري التوصيل',
+    completed:            'تم التسليم'
   };
   const currentStatusIndex = activeOrder ? statusFlow.indexOf(activeOrder.status) : -1;
 
@@ -396,7 +407,7 @@ export default function DriverOrders() {
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">📞 {activeOrder.customer_phone}</p>
 
             {/* Live Map — driver + customer positions */}
-            {['driver_accepted','going_to_location','arrived_at_location','items_collected','delivering'].includes(activeOrder.status) && (
+            {['driver_accepted','going_to_location','arrived_at_location','items_collected','delivering', 'going_to_pickup', 'arrived_at_pickup'].includes(activeOrder.status) && (
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
@@ -467,8 +478,41 @@ export default function DriverOrders() {
             )}
           </div>
 
-          {/* ── Place Details (what customer wants) ────────────────────── */}
-          {activeOrder.place_details && activeOrder.place_details.length > 0 && (
+          {/* ── Delivery service info card ───────────────────────────────── */}
+          {activeOrder.service_type === 'delivery_service' && (
+            <div className="card space-y-3 border-2 border-primary-200 dark:border-primary-800">
+              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                {activeOrder.delivery_sub_type === 'person' ? '🧑 توصيل شخص' : '📦 توصيل طرد'}
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <MapPin size={12} className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 font-medium">نقطة الاستلام</p>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{activeOrder.pickup_address}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Navigation size={12} className="text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 font-medium">نقطة التسليم</p>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{activeOrder.dropoff_address}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-2 flex justify-between">
+                <span className="text-sm text-gray-500">أجر التوصيل</span>
+                <span className="font-bold text-primary-600">{parseFloat(activeOrder.delivery_fee || 0).toFixed(2)} ج.م</span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Place Details (shopping orders only) ─────────────────────── */}
+          {activeOrder.service_type !== 'delivery_service' && activeOrder.place_details && activeOrder.place_details.length > 0 && (
             <div className="card space-y-3">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Store size={16} className="text-primary-500" />
@@ -497,8 +541,8 @@ export default function DriverOrders() {
             </div>
           )}
 
-          {/* ── Delivery Stops ──────────────────────────────────────────── */}
-          {activeOrder.locations?.length > 0 && (
+          {/* ── Delivery Stops (shopping orders only) ──────────────────── */}
+          {activeOrder.service_type !== 'delivery_service' && activeOrder.locations?.length > 0 && (
             <div className="card space-y-2">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <MapPin size={16} className="text-primary-500" /> محطات التوصيل
@@ -513,13 +557,14 @@ export default function DriverOrders() {
             </div>
           )}
 
-          {/* ── Receipt Builder — available at any time for any order ─────────── */}
-          <div className="card space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Receipt size={16} className="text-primary-500" /> فاتورة المشتريات
-              </h3>
-              <div className="flex items-center gap-2">
+          {/* ── Invoice / Receipt Builder — shopping orders only ──────────── */}
+          {activeOrder.service_type !== 'delivery_service' && (
+            <div className="card space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Receipt size={16} className="text-primary-500" /> فاتورة المشتريات
+                </h3>
+                <div className="flex items-center gap-2">
                 {activeOrder.estimate_status && (
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${estimateBadge[activeOrder.estimate_status]?.cls}`}>
                     {estimateBadge[activeOrder.estimate_status]?.text}
@@ -707,6 +752,7 @@ export default function DriverOrders() {
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 
@@ -732,8 +778,8 @@ export default function DriverOrders() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-mono text-gray-400">{order.order_number}</span>
                           <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 rounded-full">جديد</span>
-                          <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
-                            {order.service_type === 'driver_purchase' ? '🛒 شراء' : '📦 جاهز'}
+                          <span className={`text-xs px-2 py-0.5 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 rounded-full`}>
+                            {order.service_type === 'delivery_service' ? '🚗 توصيل' : order.service_type === 'driver_purchase' ? '🛒 شراء' : '📦 جاهز'}
                           </span>
                         </div>
                         <p className="text-sm font-semibold text-gray-800 dark:text-white mt-1">👤 {order.customer_name}</p>

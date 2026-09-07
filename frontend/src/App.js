@@ -39,6 +39,7 @@ import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminDriverBalance from './pages/admin/AdminDriverBalance';
 import AdminBanners from './pages/admin/AdminBanners';
+import AdminDeliveryPrices from './pages/admin/AdminDeliveryPrices';
 
 function App() {
   const { user, loading } = useAuth();
@@ -91,6 +92,7 @@ function App() {
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="banners" element={<AdminBanners />} />
+          <Route path="delivery-prices" element={<AdminDeliveryPrices />} />
         </Route>
       </Routes>
     </div>

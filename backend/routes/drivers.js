@@ -144,11 +144,14 @@ router.get('/available-orders', async (req, res) => {
 
     const orders = await db.query(
       `SELECT o.*, v.type as vehicle_type, c.name as customer_name, c.phone as customer_phone,
-        (SELECT COUNT(*) FROM order_locations WHERE order_id = o.id) as location_count
+        (SELECT COUNT(*) FROM order_locations WHERE order_id = o.id) as location_count,
+        fl.name_ar as pickup_area_name, tl.name_ar as dropoff_area_name
        FROM orders o
        JOIN vehicles v ON o.vehicle_id = v.id
        JOIN customers cust ON o.customer_id = cust.id
        JOIN users c ON cust.user_id = c.id
+       LEFT JOIN locations fl ON o.pickup_location_id  = fl.id
+       LEFT JOIN locations tl ON o.dropoff_location_id = tl.id
        WHERE o.status = 'finding_driver'
        AND o.vehicle_id = $1
        AND o.driver_id IS NULL
@@ -238,17 +241,29 @@ router.post('/accept-order/:orderId', async (req, res) => {
 
 // Update order status — validates transition and guards against double-completion
 router.put('/order-status/:orderId', async (req, res) => {
-  const TRANSITIONS = {
-    driver_accepted: 'going_to_location',
-    going_to_location: 'arrived_at_location',
-    arrived_at_location: 'items_collected',
-    items_collected: 'delivering',
-    delivering: 'completed'
+  // Shopping (مشتريات) flow
+  const SHOPPING_TRANSITIONS = {
+    driver_accepted:       'going_to_location',
+    going_to_location:     'arrived_at_location',
+    arrived_at_location:   'items_collected',
+    items_collected:       'delivering',
+    delivering:            'completed'
   };
+  // Delivery service (خدمة التوصيل) flow
+  const DELIVERY_TRANSITIONS = {
+    driver_accepted:   'going_to_pickup',
+    going_to_pickup:   'arrived_at_pickup',
+    arrived_at_pickup: 'delivering',
+    delivering:        'completed'
+  };
+  const ALL_VALID_NEXT = new Set([
+    ...Object.values(SHOPPING_TRANSITIONS),
+    ...Object.values(DELIVERY_TRANSITIONS)
+  ]);
   let client;
   try {
     const { status } = req.body;
-    if (!Object.values(TRANSITIONS).includes(status)) {
+    if (!ALL_VALID_NEXT.has(status)) {
       return res.status(400).json({ message: `Invalid status: ${status}` });
     }
 
@@ -264,7 +279,7 @@ router.put('/order-status/:orderId', async (req, res) => {
     const driverId = driverResult.rows[0].id;
 
     const orderCheck = await client.query(
-      `SELECT id, status, completed_at FROM orders
+      `SELECT id, status, service_type, completed_at FROM orders
        WHERE id = $1 AND driver_id = $2 AND status NOT IN ('completed','cancelled')
        FOR UPDATE`,
       [req.params.orderId, driverId]
@@ -275,11 +290,15 @@ router.put('/order-status/:orderId', async (req, res) => {
       client = null;
       return res.status(400).json({ message: 'Order not found or already closed' });
     }
-    if (TRANSITIONS[orderCheck.rows[0].status] !== status) {
+    const currentOrder = orderCheck.rows[0];
+    const TRANSITIONS = currentOrder.service_type === 'delivery_service'
+      ? DELIVERY_TRANSITIONS
+      : SHOPPING_TRANSITIONS;
+    if (TRANSITIONS[currentOrder.status] !== status) {
       await client.query('ROLLBACK');
       client.release();
       client = null;
-      return res.status(400).json({ message: `Invalid transition from ${orderCheck.rows[0].status} to ${status}` });
+      return res.status(400).json({ message: `Invalid transition from ${currentOrder.status} to ${status}` });
     }
 
     await client.query(

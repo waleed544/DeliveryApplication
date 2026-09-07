@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Users, Users2, ClipboardList, MapPin,
   DollarSign, AlertTriangle, LogOut, Menu, X,
-  Store, Settings, Image
+  Store, Settings, Image, Route
 } from 'lucide-react';
 import BrandLogo from '../common/BrandLogo';
 
@@ -20,8 +20,9 @@ export default function AdminLayout() {
     { path: '/admin/customers',    icon: <Users2 size={18} />,          label: 'العملاء'        },
     { path: '/admin/orders',       icon: <ClipboardList size={18} />,   label: 'الطلبات'        },
     { path: '/admin/locations',    icon: <MapPin size={18} />,          label: 'المواقع'        },
-    { path: '/admin/pricing',      icon: <DollarSign size={18} />,      label: 'الأسعار'        },
-    { path: '/admin/place-options',icon: <Store size={18} />,           label: 'خيارات الأماكن' },
+    { path: '/admin/pricing',         icon: <DollarSign size={18} />,      label: 'الأسعار'           },
+    { path: '/admin/delivery-prices',  icon: <Route size={18} />,           label: 'أسعار التوصيل'    },
+    { path: '/admin/place-options',    icon: <Store size={18} />,           label: 'خيارات الأماكن'    },
     { path: '/admin/complaints',   icon: <AlertTriangle size={18} />,   label: 'الشكاوى'        },
     { path: '/admin/settings',     icon: <Settings size={18} />,        label: 'إعدادات المنصة' },
     { path: '/admin/banners',      icon: <Image size={18} />,            label: 'إعلانات التطبيق' },
