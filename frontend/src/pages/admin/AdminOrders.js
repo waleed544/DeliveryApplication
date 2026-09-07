@@ -8,7 +8,6 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
   const [searchParams] = useSearchParams();
   const financialView = searchParams.get('financial');
 
@@ -23,12 +22,10 @@ export default function AdminOrders() {
   };
 
   const openOrderDetail = (orderId) => {
-    setLoadingDetail(true);
     setSelectedOrder({ _loading: true });
     api.get(`/admin/orders/${orderId}`)
       .then(r => { setSelectedOrder(r.data); })
-      .catch(() => setSelectedOrder(null))
-      .finally(() => setLoadingDetail(false));
+      .catch(() => setSelectedOrder(null));
   };
 
   const statusLabels = {

@@ -150,6 +150,7 @@ export default function AdminLocations() {
       {loading ? (
         <div className="card text-center py-12"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
       ) : (
+        <>
         <p className="text-xs text-gray-400 dark:text-gray-500 text-center sm:hidden mb-1">← اسحب يساراً لرؤية الإجراءات</p>
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-sm" style={{ minWidth: '520px' }}>
@@ -275,6 +276,7 @@ export default function AdminLocations() {
             )}
           </table>
         </div>
+        </>
       )}
     </div>
   );
