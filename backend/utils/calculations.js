@@ -51,16 +51,16 @@ const calculateLocationBasedPricing = async (locationIds, serviceType, itemsSubt
   // ── Vehicle surcharge (tok-tok or car costs more than motorcycle) ─────────
   let vehicleSurcharge = 0;
   if (vehicleType === 'tuk_tuk') {
-    vehicleSurcharge = settings['tuk_tuk_surcharge'] || 0;
+    vehicleSurcharge = settings['tuk_tuk_surcharge'] ?? 0;
   } else if (vehicleType === 'car') {
-    vehicleSurcharge = settings['car_surcharge'] || 0;
+    vehicleSurcharge = settings['car_surcharge'] ?? 0;
   }
   deliveryFee += vehicleSurcharge;
 
   // ── Service fee ───────────────────────────────────────────────────────────
   const serviceFee = serviceType === 'driver_purchase'
-    ? (settings.driver_purchase_fee || 25)
-    : (settings.ready_items_fee || 10);
+    ? (settings.driver_purchase_fee ?? 25)
+    : (settings.ready_items_fee ?? 10);
 
   // ── Subtotal ──────────────────────────────────────────────────────────────
   let subtotal = deliveryFee + serviceFee + itemsSubtotal + placesFee;
@@ -89,8 +89,8 @@ const calculateLocationBasedPricing = async (locationIds, serviceType, itemsSubt
   const finalTotal = subtotal - promoDiscount;
 
   // ── Revenue split ─────────────────────────────────────────────────────────
-  const driverPct = settings.driver_percentage || 80;
-  const ownerPct  = settings.owner_percentage  || 20;
+  const driverPct = settings.driver_percentage ?? 80;
+  const ownerPct  = settings.owner_percentage  ?? 20;
   const feeProfitBase = deliveryFee + serviceFee + placesFee;
   // Apply a discount to the fee pool proportionally when the order includes items.
   // Item prices are pass-through costs and are not driver/admin profit.
@@ -128,8 +128,8 @@ const calculateOrderPricing = async (vehicleType, numLocations, serviceType, ite
   }
 
   const serviceFee = serviceType === 'driver_purchase'
-    ? (settings.driver_purchase_fee || 25)
-    : (settings.ready_items_fee || 10);
+    ? (settings.driver_purchase_fee ?? 25)
+    : (settings.ready_items_fee ?? 10);
 
   let subtotal = deliveryFee + serviceFee + itemsSubtotal;
   let promoDiscount = 0;
@@ -153,8 +153,8 @@ const calculateOrderPricing = async (vehicleType, numLocations, serviceType, ite
   }
 
   const finalTotal = subtotal - promoDiscount;
-  const driverPct = settings.driver_percentage || 80;
-  const ownerPct  = settings.owner_percentage  || 20;
+  const driverPct = settings.driver_percentage ?? 80;
+  const ownerPct  = settings.owner_percentage  ?? 20;
   const feeProfitBase = deliveryFee + serviceFee;
   const feeDiscount = subtotal > 0 ? promoDiscount * (feeProfitBase / subtotal) : 0;
   const discountedFeeProfit = Math.max(0, feeProfitBase - feeDiscount);
