@@ -17,15 +17,22 @@ export default function AdminPricing() {
   }, []);
 
   const updateSetting = (key, value) => {
-    setSettings(settings.map(s => s.key === key ? { ...s, value: parseFloat(value) } : s));
+    // Store raw string while typing so '0' and '' both work correctly
+    setSettings(settings.map(s => s.key === key ? { ...s, value } : s));
   };
 
   const saveAll = async () => {
     setSaving(true);
     try {
       for (const s of settings) {
-        await api.put(`/pricing/${s.key}`, { value: s.value, description: s.description });
+        const numValue = parseFloat(s.value);
+        // Explicitly allow 0; only skip if not a valid number
+        const safeValue = isNaN(numValue) ? 0 : numValue;
+        await api.put(`/pricing/${s.key}`, { value: safeValue, description: s.description });
       }
+      // Re-fetch to sync state with DB after save
+      const r = await api.get('/pricing');
+      setSettings(r.data);
       toast.success('تم حفظ جميع الأسعار');
     } catch {
       toast.error('فشل الحفظ');
