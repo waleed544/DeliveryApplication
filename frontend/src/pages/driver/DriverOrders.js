@@ -249,7 +249,7 @@ export default function DriverOrders() {
     }
   };
 
-  const updateStatus = async (status) => {
+  const updateStatus = async (status, forceComplete = false) => {
     // Block status advance if estimate is still pending
     if (activeOrder?.service_type === 'driver_purchase' &&
         activeOrder?.estimate_status === 'pending') {
@@ -257,7 +257,7 @@ export default function DriverOrders() {
       return;
     }
     try {
-      await api.put(`/drivers/order-status/${activeOrder.id}`, { status });
+      await api.put(`/drivers/order-status/${activeOrder.id}`, { status, force_complete: forceComplete });
       toast.success('تم تحديث الحالة');
       setActiveOrder(prev => prev ? { ...prev, status } : prev);
       if (status === 'completed') {
@@ -447,6 +447,16 @@ export default function DriverOrders() {
               ))}
             </div>
 
+            {/* One-click "تم التسليم" — delivery orders only */}
+            {activeOrder.service_type === 'delivery_service' && activeOrder.status !== 'completed' && (
+              <button
+                onClick={() => updateStatus('completed', true)}
+                className="w-full mt-1 mb-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-base shadow-md shadow-green-200 dark:shadow-green-900 transition-all active:scale-95"
+              >
+                <CheckCircle size={20} /> تم التسليم — إنهاء الطلب دفعة واحدة
+              </button>
+            )}
+
             {/* Action buttons */}
             <div className="flex gap-2 flex-wrap">
               <a href={`tel:${activeOrder.customer_phone}`} className="btn-secondary flex items-center gap-1 text-sm px-3 py-2">
@@ -460,6 +470,7 @@ export default function DriverOrders() {
                 <XCircle size={15} /> إلغاء الطلب
               </button>
             </div>
+
 
             {/* Cancel confirm */}
             {showCancelConfirm && (

@@ -57,13 +57,20 @@ export default function OrderTracking() {
       setOrder((prev) => {
         if (!prev) return prev;
         const updated = { ...prev, status };
-        const labels = {
-          driver_accepted: '✅ تم قبول الطلب من السائق',
-          going_to_location: '🚗 السائق في الطريق إليك',
+        const isDelivery = prev.service_type === 'delivery_service';
+        const labels = isDelivery ? {
+          driver_accepted:   '✅ تم قبول الطلب من السائق',
+          going_to_pickup:   '🚗 السائق في الطريق للاستلام',
+          arrived_at_pickup: '📍 وصل السائق لنقطة الاستلام',
+          delivering:        '🚚 جاري التوصيل',
+          completed:         '🎉 تم تسليم طلبك!'
+        } : {
+          driver_accepted:     '✅ تم قبول الطلب من السائق',
+          going_to_location:   '🚗 السائق في الطريق إليك',
           arrived_at_location: '📍 وصل السائق للموقع',
-          items_collected: '📦 تم جمع المنتجات',
-          delivering: '🚚 جاري التوصيل',
-          completed: '🎉 تم تسليم طلبك!'
+          items_collected:     '📦 تم جمع المنتجات',
+          delivering:          '🚚 جاري التوصيل',
+          completed:           '🎉 تم تسليم طلبك!'
         };
         if (labels[status]) toast.success(labels[status]);
         return updated;
@@ -117,7 +124,7 @@ export default function OrderTracking() {
   // ── Location sharing: join tracking room + watch own GPS ──────────────────
   useEffect(() => {
     if (!order) return;
-    const activeStatuses = ['driver_accepted','going_to_location','arrived_at_location','items_collected','delivering'];
+    const activeStatuses = ['driver_accepted','going_to_location','arrived_at_location','items_collected','delivering','going_to_pickup','arrived_at_pickup'];
     const isActive = activeStatuses.includes(order.status) && order.driver_id;
 
     if (!isActive) {
@@ -303,17 +310,28 @@ export default function OrderTracking() {
     setTimeout(() => { win.print(); }, 400);
   };
 
-  const statusSteps = [
-    { key: 'requested', label: 'تم الطلب', icon: <Package size={16} /> },
-    { key: 'finding_driver', label: 'البحث عن سائق', icon: <Truck size={16} /> },
-    { key: 'driver_accepted', label: 'قبول السائق', icon: <CheckCircle size={16} /> },
-    { key: 'going_to_location', label: 'في الطريق', icon: <MapPin size={16} /> },
-    { key: 'arrived_at_location', label: 'وصل للموقع', icon: <MapPin size={16} /> },
-    { key: 'items_collected', label: 'تم الجمع', icon: <Package size={16} /> },
-    { key: 'delivering', label: 'جاري التوصيل', icon: <Truck size={16} /> },
-    { key: 'completed', label: 'تم التسليم', icon: <CheckCircle size={16} /> },
+  const shoppingSteps = [
+    { key: 'requested',          label: 'تم الطلب',           icon: <Package size={16} /> },
+    { key: 'finding_driver',     label: 'البحث عن سائق',       icon: <Truck size={16} /> },
+    { key: 'driver_accepted',    label: 'قبول السائق',         icon: <CheckCircle size={16} /> },
+    { key: 'going_to_location',  label: 'في الطريق',           icon: <MapPin size={16} /> },
+    { key: 'arrived_at_location',label: 'وصل للموقع',          icon: <MapPin size={16} /> },
+    { key: 'items_collected',    label: 'تم الجمع',            icon: <Package size={16} /> },
+    { key: 'delivering',         label: 'جاري التوصيل',        icon: <Truck size={16} /> },
+    { key: 'completed',          label: 'تم التسليم',          icon: <CheckCircle size={16} /> },
   ];
 
+  const deliverySteps = [
+    { key: 'requested',          label: 'تم الطلب',              icon: <Package size={16} /> },
+    { key: 'finding_driver',     label: 'البحث عن سائق',          icon: <Truck size={16} /> },
+    { key: 'driver_accepted',    label: 'قبول السائق',            icon: <CheckCircle size={16} /> },
+    { key: 'going_to_pickup',    label: 'في الطريق للاستلام',     icon: <Navigation size={16} /> },
+    { key: 'arrived_at_pickup',  label: 'وصل لنقطة الاستلام',     icon: <MapPin size={16} /> },
+    { key: 'delivering',         label: 'جاري التوصيل',           icon: <Truck size={16} /> },
+    { key: 'completed',          label: 'تم التسليم',             icon: <CheckCircle size={16} /> },
+  ];
+
+  const statusSteps = order?.service_type === 'delivery_service' ? deliverySteps : shoppingSteps;
   const getStepIndex = (status) => statusSteps.findIndex(s => s.key === status);
 
   if (loading) return <div className="card text-center py-12"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>;

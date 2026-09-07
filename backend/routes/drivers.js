@@ -291,15 +291,24 @@ router.put('/order-status/:orderId', async (req, res) => {
       return res.status(400).json({ message: 'Order not found or already closed' });
     }
     const currentOrder = orderCheck.rows[0];
-    const TRANSITIONS = currentOrder.service_type === 'delivery_service'
-      ? DELIVERY_TRANSITIONS
-      : SHOPPING_TRANSITIONS;
-    if (TRANSITIONS[currentOrder.status] !== status) {
-      await client.query('ROLLBACK');
-      client.release();
-      client = null;
-      return res.status(400).json({ message: `Invalid transition from ${currentOrder.status} to ${status}` });
+    const { force_complete } = req.body;
+
+    // One-click complete — only for delivery_service orders
+    if (force_complete && currentOrder.service_type === 'delivery_service') {
+      // fast-path: skip all intermediate steps, jump directly to 'completed'
+      // status variable stays 'completed' which is already in ALL_VALID_NEXT
+    } else {
+      const TRANSITIONS = currentOrder.service_type === 'delivery_service'
+        ? DELIVERY_TRANSITIONS
+        : SHOPPING_TRANSITIONS;
+      if (TRANSITIONS[currentOrder.status] !== status) {
+        await client.query('ROLLBACK');
+        client.release();
+        client = null;
+        return res.status(400).json({ message: `Invalid transition from ${currentOrder.status} to ${status}` });
+      }
     }
+
 
     await client.query(
       'UPDATE orders SET status = $1 WHERE id = $2 AND driver_id = $3',
