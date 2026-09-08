@@ -114,16 +114,6 @@ export default function CreateOrder() {
     const details = Array.from({ length: count }, emptyPlaceDetail);
     setForm({ ...form, num_places: count, places_fee: fee, place_details: details, _selected_option_id: option.id });
   };
-  const addPlaceDetail = () => setForm({ ...form, place_details: [...form.place_details, emptyPlaceDetail()] });
-  const removePlaceDetail = (idx) => {
-    if (form.place_details.length <= (selectedPlacesOption?.min_places || 1)) return;
-    setForm({ ...form, place_details: form.place_details.filter((_, i) => i !== idx) });
-  };
-  const updatePlaceDetail = (idx, field, value) => {
-    const updated = [...form.place_details];
-    updated[idx] = { ...updated[idx], [field]: value };
-    setForm({ ...form, place_details: updated });
-  };
 
   // ── Pricing preview (shopping only) ──────────────────────────────────────
   const previewPricing = async () => {
@@ -286,7 +276,6 @@ export default function CreateOrder() {
   const activeSteps = mode === 'delivery' ? deliverySteps : shoppingSteps;
   const locationPrice = (id) => { const l = locations.find(x => x.id === id); return l ? parseFloat(l.delivery_price) || 0 : 0; };
   const selectedPlacesOption = placeOptions.find(o => o.id === form._selected_option_id);
-  const isOpenEnded = selectedPlacesOption?.is_open_ended || false;
   const pickupArea  = locations.find(l => l.id === delivery.pickup_location_id);
   const dropoffArea = locations.find(l => l.id === delivery.dropoff_location_id);
 

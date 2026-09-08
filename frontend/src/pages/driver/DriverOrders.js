@@ -4,9 +4,9 @@ import api from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import LiveMap from '../../components/common/LiveMap';
 import {
-  Package, CheckCircle, MapPin, Plus, Trash2, ChevronDown, ChevronUp,
-  Phone, Navigation, MessageCircle, Store, Send, XCircle, AlertTriangle,
-  Receipt, ShoppingBag, Info
+  Package, CheckCircle, MapPin, ChevronDown, ChevronUp,
+  Phone, Navigation, MessageCircle, Store, XCircle, AlertTriangle,
+  Receipt, Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -298,12 +298,6 @@ export default function DriverOrders() {
     completed:            'تم التسليم'
   };
   const currentStatusIndex = activeOrder ? statusFlow.indexOf(activeOrder.status) : -1;
-
-  const estimateBadge = {
-    pending:  { text: 'بانتظار موافقة العميل', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
-    approved: { text: 'وافق العميل ✅',          cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-    rejected: { text: 'رفض العميل ❌',            cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
-  };
 
 
   if (loading) return (
