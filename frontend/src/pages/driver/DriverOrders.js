@@ -518,7 +518,7 @@ export default function DriverOrders() {
               {activeOrder.locations.map((loc, idx) => (
                 <button key={loc.id} onClick={() => setExpandedLoc(expandedLoc === loc.id ? null : loc.id)}
                   className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 text-right">
-                  <span className="font-medium text-sm">📍 محطة {idx + 1}: {loc.name_ar || loc.custom_address}</span>
+                  <span className="font-medium text-sm">📍 عنوان العميل {idx + 1}: {loc.name_ar || loc.custom_address}</span>
                   {expandedLoc === loc.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
               ))}

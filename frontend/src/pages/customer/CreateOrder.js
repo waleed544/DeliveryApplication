@@ -397,7 +397,7 @@ export default function CreateOrder() {
                   <span className="text-3xl">🚗</span>
                   <div className="flex-1">
                     <p className="font-bold text-gray-900 dark:text-white text-lg">خدمة التوصيل</p>
-                    <p className="text-sm text-gray-500">توصيل شخص أو طرد من مكان لآخر</p>
+                    <p className="text-sm text-gray-500">توصيل شخص أو طرداو اوردر من مكان لآخر</p>
                     <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 px-2 py-0.5 rounded-full">
                       <ArrowLeftRight size={11} /> سعر ثابت بين المناطق
                     </span>
@@ -707,7 +707,7 @@ export default function CreateOrder() {
                   <MapPin size={18} className="text-green-500" />
                   {delivery.sub_type === 'person' ? 'أين الشخص الآن؟' : 'أين الطرد الآن؟'}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">اختر المنطقة الأقرب ثم أدخل العنوان التفصيلي</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">  ادخل عنوانك ثم ادخل العنوان التفصيلي </p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة</label>
@@ -735,7 +735,7 @@ export default function CreateOrder() {
                   <Navigation size={18} className="text-red-500" />
                   {delivery.sub_type === 'person' ? 'إلى أين يريد الذهاب؟' : 'إلى أين يُوصَّل الطرد؟'}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">اختر المنطقة الأقرب ثم أدخل العنوان التفصيلي</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">ادخل عنوانك ثم ادخل العنوان التفصيلي </p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة</label>
@@ -785,7 +785,7 @@ export default function CreateOrder() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات (اختياري)</label>
                 <textarea value={delivery.notes} onChange={e => setDelivery({ ...delivery, notes: e.target.value })}
-                  className="input-field mb-3" rows={2} placeholder="أي ملاحظات للسائق..." />
+                  className="input-field mb-3" rows={2} placeholder="ادخل سعر الاوردر .." />
               </div>
 
               <div>
