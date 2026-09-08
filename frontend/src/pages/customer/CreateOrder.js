@@ -165,7 +165,7 @@ export default function CreateOrder() {
       return form.locations.some(l => l.location_id) && form.locations.every(l => l.custom_address.trim() !== '');
     }
     if (step === 4) {
-      return form.num_places !== null && form.place_details.every(p => p.name.trim() !== '');
+      return form.num_places !== null;
     }
     // steps 5,6 always ok
 
@@ -188,7 +188,6 @@ export default function CreateOrder() {
         else toast.error('أدخل عنوان التوصيل التفصيلي لكل محطة');
       } else if (step === 4) {
         if (form.num_places === null) toast.error('اختر عدد الأماكن');
-        else toast.error('أدخل اسم كل مكان');
       } else if (step === 10) toast.error('اختر شخص أو طرد');
       else if (step === 11) toast.error('اختر منطقة الاستلام وأدخل العنوان التفصيلي');
       else if (step === 12) {
@@ -521,32 +520,6 @@ export default function CreateOrder() {
               </div>
               {form.num_places !== null && (
                 <div className="space-y-3 pt-2">
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2"><Info size={14} className="text-primary-500" /> تفاصيل الأماكن</h4>
-                  {form.place_details.map((place, idx) => (
-                    <div key={idx} className="card space-y-2 border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-primary-600 dark:text-primary-400">🏪 مكان {idx + 1}</span>
-                        {isOpenEnded && form.place_details.length > (selectedPlacesOption?.min_places || 1) && (
-                          <button onClick={() => removePlaceDetail(idx)} className="text-red-400 hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">اسم المكان / المحل</label>
-                        <input value={place.name} onChange={e => updatePlaceDetail(idx, 'name', e.target.value)}
-                          className="input-field text-sm" placeholder="مثال: سوبرماركت النيل، صيدلية الشفاء..." />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">ما يحتاج السائق شراؤه / أخذه</label>
-                        <textarea value={place.description} onChange={e => updatePlaceDetail(idx, 'description', e.target.value)}
-                          className="input-field text-sm" rows={2} placeholder="اكتب المنتجات أو الأشياء المطلوبة من هذا المكان..." />
-                      </div>
-                    </div>
-                  ))}
-                  {isOpenEnded && (
-                    <button onClick={addPlaceDetail} className="w-full py-3 border-2 border-dashed border-primary-300 dark:border-primary-700 rounded-xl text-primary-600 dark:text-primary-400 font-semibold flex items-center justify-center gap-2 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
-                      <Plus size={18} /> إضافة مكان آخر
-                    </button>
-                  )}
                   {form.places_fee > 0 && (
                     <div className="flex items-center justify-between px-4 py-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-100 dark:border-primary-800">
                       <span className="text-sm font-medium text-primary-700 dark:text-primary-300">رسوم عدد الأماكن</span>
@@ -652,16 +625,6 @@ export default function CreateOrder() {
                     </span>
                     <span className="text-sm font-bold text-primary-600">{form.places_fee === 0 ? 'بدون رسوم إضافية' : `+ ${form.places_fee} ج.م`}</span>
                   </div>
-                  {form.place_details.length > 0 && (
-                    <div className="space-y-1 mt-1">
-                      {form.place_details.map((p, i) => (
-                        <p key={i} className="text-xs text-gray-500 dark:text-gray-400">
-                          🏪 <span className="font-medium text-gray-700 dark:text-gray-300">{p.name || `مكان ${i + 1}`}</span>
-                          {p.description && ` — ${p.description}`}
-                        </p>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
               {pricing ? (
