@@ -31,9 +31,10 @@ export default function CustomerLayout() {
             <div className="relative">
               <button
                 onClick={() => setShowSupport(s => !s)}
-                className="relative p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600"
+                className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600"
               >
-                <PhoneCall size={18} />
+                <PhoneCall size={16} />
+                <span className="text-xs font-semibold">الدعم الفني</span>
                 <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
               </button>
               {showSupport && (
