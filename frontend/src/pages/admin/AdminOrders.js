@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
-import { Eye, X, MapPin, Package, ShoppingCart } from 'lucide-react';
+import { Eye, X, MapPin, Package, ShoppingCart, Trash2, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -10,6 +11,11 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [searchParams] = useSearchParams();
   const financialView = searchParams.get('financial');
+
+  // Delete state
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { fetchOrders(); }, []);
 
@@ -26,6 +32,32 @@ export default function AdminOrders() {
     api.get(`/admin/orders/${orderId}`)
       .then(r => { setSelectedOrder(r.data); })
       .catch(() => setSelectedOrder(null));
+  };
+
+  const handleDeleteOne = async (orderId) => {
+    setDeleting(true);
+    try {
+      const res = await api.delete(`/admin/orders/${orderId}`);
+      toast.success(res.data.message);
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      setConfirmDeleteId(null);
+      if (selectedOrder?.id === orderId) setSelectedOrder(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'فشل الحذف');
+    } finally { setDeleting(false); }
+  };
+
+  const handleDeleteAll = async () => {
+    setDeleting(true);
+    try {
+      const res = await api.delete('/admin/orders');
+      toast.success(res.data.message);
+      setOrders([]);
+      setShowDeleteAll(false);
+      setSelectedOrder(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'فشل حذف السجل');
+    } finally { setDeleting(false); }
   };
 
   const statusLabels = {
@@ -52,9 +84,19 @@ export default function AdminOrders() {
 
   return (
     <div className="animate-fade-in space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-        {financialView === 'service' ? 'إيرادات الخدمة' : financialView === 'owner' ? 'أرباح المالك' : filter === 'cancelled' ? 'الطلبات الملغية' : 'إدارة الطلبات'}
-      </h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {financialView === 'service' ? 'إيرادات الخدمة' : financialView === 'owner' ? 'أرباح المالك' : filter === 'cancelled' ? 'الطلبات الملغية' : 'إدارة الطلبات'}
+        </h1>
+        {orders.length > 0 && (
+          <button
+            onClick={() => setShowDeleteAll(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors shadow"
+          >
+            <Trash2 size={16} /> حذف كل السجل ({orders.length})
+          </button>
+        )}
+      </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2">
         <button onClick={() => setFilter('')} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${!filter ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600'}`}>الكل</button>
@@ -87,18 +129,70 @@ export default function AdminOrders() {
                   <td className="py-3 text-sm font-bold text-primary-600">{order.final_total} ج.م</td>
                   <td className="py-3 text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString('ar-EG')}</td>
                   <td className="py-3 pl-4">
-                    <button
-                      onClick={() => openOrderDetail(order.id)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                      title="عرض التفاصيل"
-                    >
-                      <Eye size={16} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openOrderDetail(order.id)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                        title="عرض التفاصيل"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      {confirmDeleteId === order.id ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleDeleteOne(order.id)} disabled={deleting}
+                            className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold disabled:opacity-60">
+                            {deleting ? '...' : 'تأكيد'}
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(null)}
+                            className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold">
+                            إلغاء
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteId(order.id)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          title="حذف الطلب">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Delete ALL confirmation modal */}
+      {showDeleteAll && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={24} className="text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-lg">حذف كل السجل</h3>
+                <p className="text-sm text-gray-500 mt-0.5">هذا الإجراء لا يمكن التراجع عنه</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 dark:text-gray-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-3">
+              ⚠️ سيتم حذف <strong>جميع الطلبات ({orders.length} طلب)</strong> بشكل دائم. هل أنت متأكد تماماً؟
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteAll(false)}
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold text-sm hover:bg-gray-200 transition-colors">
+                لا، إلغاء
+              </button>
+              <button onClick={handleDeleteAll} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                {deleting
+                  ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <><Trash2 size={15} /> نعم، احذف الكل</>}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

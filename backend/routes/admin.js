@@ -457,6 +457,27 @@ router.get('/orders/:id', async (req, res) => {
   }
 });
 
+// Delete a single order
+router.delete('/orders/:id', async (req, res) => {
+  try {
+    const result = await db.query('DELETE FROM orders WHERE id = $1 RETURNING id, order_number', [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ message: 'الطلب غير موجود' });
+    res.json({ message: `تم حذف الطلب ${result.rows[0].order_number}` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete ALL orders history
+router.delete('/orders', async (req, res) => {
+  try {
+    const result = await db.query('DELETE FROM orders RETURNING id');
+    res.json({ message: `تم حذف ${result.rows.length} طلب بنجاح` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Process payout
 router.post('/payouts', async (req, res) => {
   try {
