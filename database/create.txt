@@ -1,7 +1,8 @@
 CREATE DATABASE delivery_platform;
 $env:PGPASSWORD = "waleed544"; & "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d delivery_platform -f "C:\Users\walid\Desktop\mer3ez\new\database\schema.sql"
 
-
+ 
+ 
 🌱 Seeding database...
 ✅ Admin created: phone=01000000000, password=admin123
 ✅ Customer created: phone=01011111111, password=customer123
