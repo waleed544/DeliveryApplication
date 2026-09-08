@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { DollarSign, Save, Percent, Store, Plus, Power } from 'lucide-react';
+import { DollarSign, Save, Percent, Store, Plus, Power, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminPricing() {
@@ -62,6 +62,17 @@ export default function AdminPricing() {
       setPromoCodes(promoCodes.map(code => code.id === item.id ? { ...code, is_active: !code.is_active } : code));
     } catch {
       toast.error('فشل تحديث كود الخصم');
+    }
+  };
+
+  const deletePromo = async (id) => {
+    if (!window.confirm('هل أنت متأكد من حذف كود الخصم هذا؟')) return;
+    try {
+      await api.delete(`/settings/promo-codes/${id}`);
+      setPromoCodes(promoCodes.filter(code => code.id !== id));
+      toast.success('تم حذف كود الخصم');
+    } catch {
+      toast.error('فشل حذف كود الخصم');
     }
   };
 
@@ -177,9 +188,14 @@ export default function AdminPricing() {
                 <span className="font-bold text-gray-900 dark:text-white">{item.code}</span>
                 <span className="text-sm text-accent mr-3">-{item.discount_value} ج.م</span>
               </div>
-              <button type="button" onClick={() => togglePromo(item)} className={item.is_active ? 'btn-secondary text-xs gap-1' : 'btn-danger text-xs gap-1'}>
-                <Power size={14} /> {item.is_active ? 'فعال' : 'متوقف'}
-              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => togglePromo(item)} className={item.is_active ? 'btn-secondary text-xs gap-1 px-2 py-1' : 'btn-danger text-xs gap-1 px-2 py-1'}>
+                  <Power size={14} /> {item.is_active ? 'فعال' : 'متوقف'}
+                </button>
+                <button type="button" onClick={() => deletePromo(item.id)} className="btn-danger text-xs gap-1 px-2 py-1">
+                  <Trash2 size={14} /> حذف
+                </button>
+              </div>
             </div>
           ))}
         </div>
