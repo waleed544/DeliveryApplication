@@ -428,7 +428,7 @@ export default function CreateOrder() {
                 return (
                   <div key={idx} className="card space-y-3 border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-primary-600 dark:text-primary-400">📍 محطة {idx + 1}</span>
+                      <span className="text-sm font-bold text-primary-600 dark:text-primary-400">📍 عنوان العميل {idx + 1}</span>
                       {form.locations.length > 1 && (
                         <button onClick={() => removeStop(idx)} className="text-red-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
                       )}
@@ -456,7 +456,7 @@ export default function CreateOrder() {
               })}
               {form.locations.length < 5 && (
                 <button onClick={addStop} className="w-full py-3 border-2 border-dashed border-primary-300 dark:border-primary-700 rounded-xl text-primary-600 dark:text-primary-400 font-semibold flex items-center justify-center gap-2 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
-                  <Plus size={18} /> إضافة محطة أخرى
+                  <Plus size={18} /> إضافة عنوان أخرى
                 </button>
               )}
               {form.locations.some(l => l.location_id) && (
@@ -592,7 +592,7 @@ export default function CreateOrder() {
                   const area = locations.find(l => l.id === loc.location_id);
                   return (
                     <div key={idx} className="space-y-1">
-                      <p className="text-xs font-bold text-primary-600">📍 محطة {idx + 1}</p>
+                      <p className="text-xs font-bold text-primary-600">📍 عنوان العميل {idx + 1}</p>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500 flex items-center gap-1"><Tag size={11} /> المنطقة:</span>
                         <span className="font-medium text-gray-800 dark:text-gray-200">{area ? area.name_ar : '—'}</span>
