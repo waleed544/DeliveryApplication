@@ -425,12 +425,18 @@ router.get('/orders', async (req, res) => {
 router.get('/orders/:id', async (req, res) => {
   try {
     const orderResult = await db.query(
-      `SELECT o.*, c.name as customer_name, c.phone as customer_phone, d.name as driver_name
+      `SELECT o.*,
+         c.name as customer_name, c.phone as customer_phone,
+         d.name as driver_name,
+         pl.name_ar as pickup_location_name,
+         dl.name_ar as dropoff_location_name
        FROM orders o
        JOIN customers cust ON o.customer_id = cust.id
        JOIN users c ON cust.user_id = c.id
        LEFT JOIN drivers dr ON o.driver_id = dr.id
        LEFT JOIN users d ON dr.user_id = d.id
+       LEFT JOIN locations pl ON o.pickup_location_id  = pl.id
+       LEFT JOIN locations dl ON o.dropoff_location_id = dl.id
        WHERE o.id = $1`,
       [req.params.id]
     );

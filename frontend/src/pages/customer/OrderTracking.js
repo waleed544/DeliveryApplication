@@ -75,6 +75,7 @@ export default function OrderTracking() {
           completed:           '🎉 تم تسليم طلبك!'
         };
         if (labels[status]) toast.success(labels[status]);
+        if (status === 'cancelled') toast.error('❌ تم إلغاء طلبك من قبل السائق', { duration: 6000 });
         return updated;
       });
       // When driver accepts, re-fetch the full order after a short delay
@@ -350,6 +351,14 @@ export default function OrderTracking() {
   const statusSteps = order?.service_type === 'delivery_service' ? deliverySteps : shoppingSteps;
   const getStepIndex = (status) => statusSteps.findIndex(s => s.key === status);
 
+  // Arabic label for any status (for the badge — includes cancelled which isn't in steps)
+  const statusLabel = (s) => {
+    const found = statusSteps.find(st => st.key === s);
+    if (found) return found.label;
+    if (s === 'cancelled') return 'تم الإلغاء';
+    return s;
+  };
+
   if (loading) return <div className="card text-center py-12"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>;
   if (!order) return <div className="card text-center py-12 text-gray-500">الطلب غير موجود</div>;
 
@@ -376,7 +385,7 @@ export default function OrderTracking() {
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-mono text-gray-500">{order.order_number}</span>
           <span className={`text-xs px-3 py-1 rounded-full ${order.status === 'completed' ? 'bg-green-100 text-green-700' : order.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-            {statusSteps.find(s => s.key === order.status)?.label || order.status}
+            {statusLabel(order.status)}
           </span>
         </div>
         <div className="flex items-end justify-between">

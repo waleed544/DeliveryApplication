@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const db = require('../config/db');
+const socketManager = require('../socketManager');
 const router = express.Router();
 
 router.use(authenticate);
@@ -126,11 +127,23 @@ router.post('/cancel-order/:id', async (req, res) => {
       return res.status(400).json({ message: 'لا يمكن إلغاء الطلب — ربما تم قبوله بالفعل أو أُلغي مسبقاً' });
     }
 
-    // Notify via socket (no driver yet, so driverUserId is null)
-    const socketManager = require('../socketManager');
+    // Notify the customer's own screen via socket
     socketManager.emitToUser(req.user.id, 'order_update', {
       orderId: req.params.id,
       status: 'cancelled'
+    });
+
+    // Also notify all available drivers so they remove it from their list
+    const availableDrivers = await db.query(
+      `SELECT u.id as user_id FROM drivers d
+       JOIN users u ON d.user_id = u.id
+       WHERE d.availability_status = 'available' AND d.is_active = true`
+    );
+    availableDrivers.rows.forEach(row => {
+      socketManager.emitToUser(row.user_id, 'order_update', {
+        orderId: req.params.id,
+        status: 'cancelled'
+      });
     });
 
     res.json({ message: 'تم إلغاء الطلب بنجاح' });

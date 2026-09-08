@@ -31,12 +31,15 @@ export default function AdminOrders() {
   const statusLabels = {
     requested: 'تم الطلب', finding_driver: 'جاري البحث', driver_assigned: 'تم التعيين',
     driver_accepted: 'قبول السائق', going_to_location: 'في الطريق', arrived_at_location: 'وصل',
-    items_collected: 'تم الجمع', delivering: 'جاري التوصيل', completed: 'مكتمل', cancelled: 'ملغي'
+    items_collected: 'تم الجمع', delivering: 'جاري التوصيل',
+    going_to_pickup: 'في الطريق للاستلام', arrived_at_pickup: 'وصل لنقطة الاستلام',
+    completed: 'مكتمل', cancelled: 'ملغي'
   };
 
   const serviceTypeLabels = {
     ready_items: 'توصيل جاهز',
-    driver_purchase: 'شراء بالوكالة'
+    driver_purchase: 'شراء بالوكالة',
+    delivery_service: 'خدمة التوصيل'
   };
 
   const locationStatusLabels = {
@@ -132,8 +135,32 @@ export default function AdminOrders() {
                   <div className="flex justify-between text-sm"><span className="text-gray-500">التاريخ</span><span>{new Date(selectedOrder.created_at).toLocaleString('ar-EG')}</span></div>
                 </div>
 
-                {/* Delivery Locations */}
-                {selectedOrder.locations && selectedOrder.locations.length > 0 && (
+                {/* Delivery Service — pickup & dropoff info */}
+                {selectedOrder.service_type === 'delivery_service' && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MapPin size={16} className="text-primary-500" />
+                      <h4 className="font-semibold text-gray-800 dark:text-white text-sm">
+                        {selectedOrder.delivery_sub_type === 'person' ? '🧑 توصيل شخص' : '📦 توصيل طرد'}
+                      </h4>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
+                        <p className="text-xs text-green-600 font-semibold mb-1">📍 نقطة الاستلام</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-white">{selectedOrder.pickup_location_name || selectedOrder.pickup_location_id}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{selectedOrder.pickup_address}</p>
+                      </div>
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+                        <p className="text-xs text-red-600 font-semibold mb-1">🏁 نقطة التسليم</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-white">{selectedOrder.dropoff_location_name || selectedOrder.dropoff_location_id}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{selectedOrder.dropoff_address}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery Locations (shopping orders) */}
+                {selectedOrder.service_type !== 'delivery_service' && selectedOrder.locations && selectedOrder.locations.length > 0 && (
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                     <div className="flex items-center gap-2 mb-3">
                       <MapPin size={16} className="text-primary-500" />
