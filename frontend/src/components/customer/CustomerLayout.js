@@ -38,7 +38,7 @@ export default function CustomerLayout() {
             {/* Earnings badge */}
             <div className="px-2 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 font-bold text-xs flex items-center gap-1 border border-orange-200 dark:border-orange-800">
               <span>مكسب:</span>
-              <span>{completedOrders}ج</span>
+              <span>{completedOrders} ج</span>
             </div>
 
             {/* Support button */}
