@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { Home, Package, User, LogOut, PhoneCall } from 'lucide-react';
 import BannerSlider from '../common/BannerSlider';
@@ -10,6 +11,13 @@ export default function CustomerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showSupport, setShowSupport] = useState(false);
+  const [completedOrders, setCompletedOrders] = useState(0);
+
+  useEffect(() => {
+    api.get('/customers/profile').then(res => {
+      if (res.data) setCompletedOrders(parseInt(res.data.completed_orders || 0, 10));
+    }).catch(err => console.error('Failed to fetch profile', err));
+  }, []);
 
   const navItems = [
     { path: '/customer', icon: <Home size={22} />, label: 'الرئيسية' },
@@ -27,6 +35,12 @@ export default function CustomerLayout() {
             <span className="font-bold text-lg text-gray-900 dark:text-white">خدمة التوصيل</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Earnings badge */}
+            <div className="px-2 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 font-bold text-xs flex items-center gap-1 border border-orange-200 dark:border-orange-800">
+              <span>مكسب:</span>
+              <span>{completedOrders}ج</span>
+            </div>
+
             {/* Support button */}
             <div className="relative">
               <button

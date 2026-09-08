@@ -10,7 +10,9 @@ router.use(authenticate);
 router.get('/profile', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT c.*, u.name, u.phone, u.email, u.avatar_url FROM customers c JOIN users u ON c.user_id = u.id WHERE u.id = $1',
+      `SELECT c.*, u.name, u.phone, u.email, u.avatar_url,
+        (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.id AND o.status = 'completed') as completed_orders
+       FROM customers c JOIN users u ON c.user_id = u.id WHERE u.id = $1`,
       [req.user.id]
     );
     res.json(result.rows[0] || null);
