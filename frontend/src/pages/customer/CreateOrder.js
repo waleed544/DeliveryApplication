@@ -141,15 +141,15 @@ export default function CreateOrder() {
   // DELIVERY steps: 1(vehicle) → 2(service-select) → D1(subtype) → D2(pickup) → D3(dropoff) → D4(review)
   // We encode delivery steps as 10+n so they don't conflict with shopping steps
 
-  const SHOPPING_TOTAL = 7;
+  const SHOPPING_TOTAL = 6;
   const DELIVERY_STEPS = [10, 11, 12, 13]; // D1..D4
 
   const isDeliveryStep = step >= 10;
   const isLastStep = mode === 'shopping' ? step === SHOPPING_TOTAL : step === 13;
 
-  // Trigger shopping preview on step 7
+  // Trigger shopping preview on step 6
   useEffect(() => {
-    if (step === 7 && mode === 'shopping' && form.vehicle_id) previewPricing();
+    if (step === 6 && mode === 'shopping' && form.vehicle_id) previewPricing();
   }, [step]); // eslint-disable-line
 
   const canAdvance = () => {
@@ -512,6 +512,16 @@ export default function CreateOrder() {
                   </div>
                 </div>
               )}
+
+              {/* Promo coupon */}
+              <div className="pt-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كود الخصم (اختياري)</label>
+                <div className="flex gap-2">
+                  <input value={form.promo_code} onChange={e => setForm({ ...form, promo_code: e.target.value })}
+                    className="input-field flex-1" placeholder="أدخل الكود" />
+                  <button onClick={previewPricing} className="btn-secondary whitespace-nowrap">تطبيق</button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -588,28 +598,8 @@ export default function CreateOrder() {
             </div>
           )}
 
-          {/* ── Step 6: Notes & Promo (shopping) ─────────────────────────────── */}
+          {/* ── Step 6: Shopping Review ──────────────────────────────────────── */}
           {step === 6 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white">ملاحظات وكوبون الخصم</h3>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات (اختياري)</label>
-                <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                  className="input-field" rows={3} placeholder="أي ملاحظات خاصة بالطلب..." />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كود الخصم (اختياري)</label>
-                <div className="flex gap-2">
-                  <input value={form.promo_code} onChange={e => setForm({ ...form, promo_code: e.target.value })}
-                    className="input-field flex-1" placeholder="أدخل الكود" />
-                  <button onClick={previewPricing} className="btn-secondary whitespace-nowrap">تطبيق</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 7: Shopping Review ──────────────────────────────────────── */}
-          {step === 7 && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-900 dark:text-white">مراجعة الطلب</h3>
               <div className="card flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
