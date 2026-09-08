@@ -447,11 +447,8 @@ export default function DriverOrders() {
               ))}
             </div>
 
-            {/* One-click "تم التسليم" — all order types once delivering started */}
-            {activeOrder.status !== 'completed' &&
-             (activeOrder.service_type === 'delivery_service' ||
-              activeOrder.status === 'delivering' ||
-              activeOrder.status === 'items_collected') && (
+            {/* One-click "تم التسليم" — all order types, all active statuses */}
+            {activeOrder.status !== 'completed' && activeOrder.status !== 'cancelled' && (
               <button
                 onClick={() => updateStatus('completed', true)}
                 className="w-full mt-1 mb-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-base shadow-md shadow-green-200 dark:shadow-green-900 transition-all active:scale-95"
