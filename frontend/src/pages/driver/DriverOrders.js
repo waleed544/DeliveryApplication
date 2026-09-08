@@ -69,6 +69,7 @@ export default function DriverOrders() {
   const [editingEstimate, setEditingEstimate] = useState(false); // allows re-editing after sent
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   // Ref so socket handlers always see the latest activeOrder without stale closures
   const activeOrderRef = useRef(null);
 
@@ -449,12 +450,34 @@ export default function DriverOrders() {
 
             {/* One-click "تم التسليم" — all order types, all active statuses */}
             {activeOrder.status !== 'completed' && activeOrder.status !== 'cancelled' && (
-              <button
-                onClick={() => updateStatus('completed', true)}
-                className="w-full mt-1 mb-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-base shadow-md shadow-green-200 dark:shadow-green-900 transition-all active:scale-95"
-              >
-                <CheckCircle size={20} /> تم التسليم — إنهاء الطلب دفعة واحدة
-              </button>
+              !showCompleteConfirm ? (
+                <button
+                  onClick={() => setShowCompleteConfirm(true)}
+                  className="w-full mt-1 mb-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-base shadow-md shadow-green-200 dark:shadow-green-900 transition-all active:scale-95"
+                >
+                  <CheckCircle size={20} /> تم التسليم — إنهاء الطلب دفعة واحدة
+                </button>
+              ) : (
+                <div className="mt-1 mb-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-xl space-y-2">
+                  <p className="text-sm font-semibold text-green-800 dark:text-green-200 flex items-center gap-2">
+                    <CheckCircle size={15} /> هل أنت متأكد من إنهاء الطلب وتسليمه للعميل؟
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowCompleteConfirm(false)}
+                      className="btn-secondary text-sm flex-1"
+                    >
+                      لا، رجوع
+                    </button>
+                    <button
+                      onClick={() => { setShowCompleteConfirm(false); updateStatus('completed', true); }}
+                      className="flex-1 py-2 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      نعم، تم التسليم
+                    </button>
+                  </div>
+                </div>
+              )
             )}
 
             {/* Action buttons */}
