@@ -293,11 +293,8 @@ router.put('/order-status/:orderId', async (req, res) => {
     const currentOrder = orderCheck.rows[0];
     const { force_complete } = req.body;
 
-    // One-click complete — only for delivery_service orders
-    if (force_complete && currentOrder.service_type === 'delivery_service') {
-      // fast-path: skip all intermediate steps, jump directly to 'completed'
-      // status variable stays 'completed' which is already in ALL_VALID_NEXT
-    } else {
+    // One-click complete — skip all intermediate steps, jump directly to 'completed'
+    if (!force_complete) {
       const TRANSITIONS = currentOrder.service_type === 'delivery_service'
         ? DELIVERY_TRANSITIONS
         : SHOPPING_TRANSITIONS;
