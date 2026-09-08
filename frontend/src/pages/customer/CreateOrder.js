@@ -358,6 +358,28 @@ export default function CreateOrder() {
                   </button>
                 );
               })}
+
+              {/* Note shown when tuk-tuk or car is selected */}
+              {form.vehicle_id && (() => {
+                const selected = vehicles.find(v => v.id === form.vehicle_id);
+                if (selected?.type === 'tuk_tuk' || selected?.type === 'car') {
+                  return (
+                    <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 animate-fade-in">
+                      <span className="text-xl flex-shrink-0">⚠️</span>
+                      <div>
+                        <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                          لطلب توك توك او سياره يرجي التواصل مع الاداره
+                        </p>
+                        <a href="tel:01019488741" className="text-sm font-bold text-amber-700 dark:text-amber-300 underline">
+                          01019488741
+                        </a>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">رسوم اضافيه ٥ ج</p>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           )}
 

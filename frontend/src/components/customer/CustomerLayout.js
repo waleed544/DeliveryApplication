@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Home, Package, User, LogOut } from 'lucide-react';
+import { Home, Package, User, LogOut, PhoneCall } from 'lucide-react';
 import BannerSlider from '../common/BannerSlider';
 import BrandLogo from '../common/BrandLogo';
 
@@ -9,6 +9,7 @@ export default function CustomerLayout() {
   const { logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [showSupport, setShowSupport] = useState(false);
 
   const navItems = [
     { path: '/customer', icon: <Home size={22} />, label: 'الرئيسية' },
@@ -26,6 +27,29 @@ export default function CustomerLayout() {
             <span className="font-bold text-lg text-gray-900 dark:text-white">خدمة التوصيل</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Support button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSupport(s => !s)}
+                className="relative p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600"
+              >
+                <PhoneCall size={18} />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              </button>
+              {showSupport && (
+                <div className="absolute top-11 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 text-right">
+                  <p className="font-bold text-gray-900 dark:text-white mb-1 text-sm">📞 الدعم الفني</p>
+                  <p className="text-xs text-gray-500 mb-3">للمساعدة تواصل مع الإدارة</p>
+                  <a
+                    href="tel:01019488741"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-colors text-sm"
+                    onClick={() => setShowSupport(false)}
+                  >
+                    <PhoneCall size={15} /> 01019488741
+                  </a>
+                </div>
+              )}
+            </div>
             <button onClick={() => { logout(); navigate('/'); }} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500">
               <LogOut size={18} />
             </button>
