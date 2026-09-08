@@ -15,6 +15,8 @@ export default function OrderTracking() {
   const [review, setReview] = useState('');
   const [complaint, setComplaint] = useState('');
   const [showRating, setShowRating] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [driverLocation, setDriverLocation]     = useState(null);  // from socket
   const [customerLocation, setCustomerLocation] = useState(null);  // own GPS
   const [locationDenied, setLocationDenied]     = useState(false);
@@ -196,6 +198,20 @@ export default function OrderTracking() {
       fetchOrder();
     } catch {
       toast.error('فشل إرسال التقييم');
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    setCancelLoading(true);
+    try {
+      await api.post(`/customers/cancel-order/${id}`);
+      toast.success('تم إلغاء الطلب');
+      setOrder(prev => prev ? { ...prev, status: 'cancelled' } : prev);
+      setShowCancelConfirm(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'فشل إلغاء الطلب');
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -428,7 +444,46 @@ export default function OrderTracking() {
         </div>
       </div>
 
-      {/* Driver Info — appears instantly when driver accepts via socket */}
+      {/* Cancel button — only while البحث عن سائق */}
+      {order.status === 'finding_driver' && (
+        <div className="card border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
+          {!showCancelConfirm ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-red-700 dark:text-red-300">إلغاء الطلب</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">يمكنك الإلغاء فقط قبل قبول السائق</p>
+              </div>
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors"
+              >
+                إلغاء الطلب
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm font-bold text-red-700 dark:text-red-300">❗ هل أنت متأكد من إلغاء الطلب؟</p>
+              <p className="text-xs text-red-500">لن يتم استرداد الرسوم بعد الإلغاء.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  رجوع
+                </button>
+                <button
+                  onClick={handleCancelOrder}
+                  disabled={cancelLoading}
+                  className="flex-1 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-colors disabled:opacity-60"
+                >
+                  {cancelLoading ? 'جاري الإلغاء...' : 'نعم، ألغِ الطلب'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {order.driver_name && (
         <div className={`card border-2 ${driverJustAccepted ? 'border-green-400 dark:border-green-600' : 'border-gray-200 dark:border-gray-700'} animate-fade-in`}>
           <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">

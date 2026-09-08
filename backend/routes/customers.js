@@ -103,4 +103,40 @@ router.get('/orders/:id', async (req, res) => {
   }
 });
 
+// Customer cancels their own order — only while still searching for a driver
+router.post('/cancel-order/:id', async (req, res) => {
+  try {
+    const customerId = await db.query(
+      'SELECT id FROM customers WHERE user_id = $1',
+      [req.user.id]
+    );
+    if (customerId.rows.length === 0) return res.status(404).json({ message: 'Customer not found' });
+
+    // Only allow cancel when the order belongs to this customer AND is still finding_driver
+    const orderResult = await db.query(
+      `UPDATE orders SET status = 'cancelled'
+       WHERE id = $1
+         AND customer_id = $2
+         AND status = 'finding_driver'
+       RETURNING id`,
+      [req.params.id, customerId.rows[0].id]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(400).json({ message: 'لا يمكن إلغاء الطلب — ربما تم قبوله بالفعل أو أُلغي مسبقاً' });
+    }
+
+    // Notify via socket (no driver yet, so driverUserId is null)
+    const socketManager = require('../socketManager');
+    socketManager.emitToUser(req.user.id, 'order_update', {
+      orderId: req.params.id,
+      status: 'cancelled'
+    });
+
+    res.json({ message: 'تم إلغاء الطلب بنجاح' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
