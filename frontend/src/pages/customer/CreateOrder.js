@@ -739,7 +739,7 @@ export default function CreateOrder() {
                 className={`w-full card flex items-center gap-4 text-right transition-all ${delivery.sub_type === 'package' ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''}`}>
                 <span className="text-4xl">📦</span>
                 <div className="flex-1">
-                  <p className="font-bold text-gray-900 dark:text-white text-lg">طرد / بضاعة</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-lg">طرد / بضاعة /اوردر </p>
                   <p className="text-sm text-gray-500">توصيل طرد أو بضاعة من مكان لآخر</p>
                 </div>
                 {delivery.sub_type === 'package' && <CheckCircle size={20} className="text-primary-500 flex-shrink-0" />}
