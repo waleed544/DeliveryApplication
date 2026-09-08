@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { Trash2, Plus, Route, ArrowLeftRight, Save } from 'lucide-react';
+import { Trash2, Plus, Route, ArrowLeftRight, Save, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminDeliveryPrices() {
@@ -27,10 +27,6 @@ export default function AdminDeliveryPrices() {
     e.preventDefault();
     if (!form.from_location_id || !form.to_location_id || form.price === '') {
       toast.error('اختر موقع الانطلاق والوصول وأدخل السعر');
-      return;
-    }
-    if (form.from_location_id === form.to_location_id) {
-      toast.error('نقطة الانطلاق والوصول لا يمكن أن تكونا نفس الموقع');
       return;
     }
     setSaving(true);
@@ -61,6 +57,15 @@ export default function AdminDeliveryPrices() {
     } catch {
       toast.error('فشل الحذف');
     }
+  };
+
+  const handleEditClick = (p) => {
+    setForm({
+      from_location_id: p.from_location_id,
+      to_location_id: p.to_location_id,
+      price: p.price
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePriceChange = async (id, newPrice) => {
@@ -177,7 +182,7 @@ export default function AdminDeliveryPrices() {
                 <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">إلى</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">السعر (ج.م)</th>
                 <th className="px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-300">الحالة</th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-300">حذف</th>
+                <th className="px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-300">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -205,9 +210,14 @@ export default function AdminDeliveryPrices() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button onClick={() => handleDelete(p.id)} className="text-red-400 hover:text-red-600 transition-colors">
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button onClick={() => handleEditClick(p)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="تعديل">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="حذف">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -245,9 +255,11 @@ function PriceCell({ price, onSave }) {
   return (
     <button
       onClick={() => setEditing(true)}
-      className="font-bold text-primary-600 dark:text-primary-400 hover:underline"
+      className="flex items-center gap-1 font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 transition-colors group"
+      title="انقر لتعديل السعر"
     >
-      {parseFloat(price).toFixed(2)} ج.م
+      <span>{parseFloat(price).toFixed(2)} ج.م</span>
+      <Edit2 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
     </button>
   );
 }

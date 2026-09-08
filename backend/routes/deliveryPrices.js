@@ -71,9 +71,6 @@ router.post('/', authorize('admin'), async (req, res) => {
   if (!from_location_id || !to_location_id || price == null) {
     return res.status(400).json({ message: 'from_location_id, to_location_id, and price are required' });
   }
-  if (from_location_id === to_location_id) {
-    return res.status(400).json({ message: 'نقطة الانطلاق والوصول لا يمكن أن تكونا نفس الموقع' });
-  }
   try {
     const result = await db.query(
       `INSERT INTO delivery_route_prices (from_location_id, to_location_id, price)
