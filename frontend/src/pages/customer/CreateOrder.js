@@ -35,7 +35,6 @@ export default function CreateOrder() {
   const [pricing, setPricing] = useState(null);
   const [placeOptions, setPlaceOptions] = useState([]);
   const [pricingSettings, setPricingSettings] = useState({});
-  const [deliveryRoutePrice, setDeliveryRoutePrice] = useState(null);
   const [lookingUpPrice, setLookingUpPrice] = useState(false);
   const navigate = useNavigate();
   const { accepting_orders, offline_message } = useSiteStatus();
@@ -175,7 +174,7 @@ export default function CreateOrder() {
     if (step === 11) return !!delivery.pickup_location_id && delivery.pickup_address.trim() !== '';
     if (step === 12) {
       if (!delivery.dropoff_location_id || delivery.dropoff_address.trim() === '') return false;
-      return deliveryRoutePrice !== null;
+      return pricing !== null;
     }
 
     return true;
@@ -783,18 +782,18 @@ export default function CreateOrder() {
 
               {/* Route price preview */}
               {delivery.pickup_location_id && delivery.dropoff_location_id && (
-                <div className={`card border-2 text-center ${deliveryRoutePrice !== null ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20' : 'border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'}`}>
+                <div className={`card border-2 text-center ${pricing !== null ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20' : 'border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'}`}>
                   {lookingUpPrice ? (
                     <div className="flex items-center justify-center gap-2 py-2">
                       <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                       <span className="text-sm text-gray-500">جاري حساب السعر...</span>
                     </div>
-                  ) : deliveryRoutePrice !== null ? (
+                  ) : pricing !== null ? (
                     <>
                       <p className="text-xs text-primary-600 dark:text-primary-400 font-medium mb-1">
                         {pickupArea?.name_ar} → {dropoffArea?.name_ar}
                       </p>
-                      <p className="text-3xl font-bold text-primary-600">{deliveryRoutePrice} ج.م</p>
+                      <p className="text-3xl font-bold text-primary-600">{pricing.deliveryFee} ج.م</p>
                       <p className="text-xs text-gray-500 mt-1">السعر الإجمالي لهذا المسار</p>
                     </>
                   ) : (
