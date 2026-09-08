@@ -25,13 +25,17 @@ router.get('/', async (req, res) => {
 });
 
 // GET /delivery-prices/lookup?from=<uuid>&to=<uuid>
+// Bidirectional: if A→B exists, it also applies to B→A
 router.get('/lookup', async (req, res) => {
   const { from, to } = req.query;
   if (!from || !to) return res.status(400).json({ message: 'from and to are required' });
   try {
     const result = await db.query(
       `SELECT price FROM delivery_route_prices
-       WHERE from_location_id = $1 AND to_location_id = $2 AND is_active = true`,
+       WHERE ((from_location_id = $1 AND to_location_id = $2)
+          OR  (from_location_id = $2 AND to_location_id = $1))
+         AND is_active = true
+       LIMIT 1`,
       [from, to]
     );
     if (!result.rows.length) return res.status(404).json({ message: 'لم يتم تحديد سعر لهذا المسار بعد' });

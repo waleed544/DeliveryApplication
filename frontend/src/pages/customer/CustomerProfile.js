@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { User, Phone, Mail, MapPin, Save, Camera, Trash2 } from 'lucide-react';
+import { User, Phone, Mail, MapPin, Save, Camera, Trash2, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Use relative URL — React proxy forwards /uploads/* to backend automatically
@@ -19,6 +19,8 @@ export default function CustomerProfile() {
   const [saving, setSaving]       = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const [pwForm, setPwForm]       = useState({ current: '', next: '', confirm: '' });
+  const [pwSaving, setPwSaving]   = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -60,6 +62,22 @@ export default function CustomerProfile() {
       toast.error(err.response?.data?.message || 'فشل الحفظ');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!pwForm.current.trim()) { toast.error('أدخل كلمة المرور الحالية'); return; }
+    if (pwForm.next.length < 6)  { toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+    if (pwForm.next !== pwForm.confirm) { toast.error('كلمة المرور الجديدة غير متطابقة'); return; }
+    setPwSaving(true);
+    try {
+      await api.put('/users/change-password', { current_password: pwForm.current, new_password: pwForm.next });
+      toast.success('✅ تم تغيير كلمة المرور بنجاح');
+      setPwForm({ current: '', next: '', confirm: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'فشل تغيير كلمة المرور');
+    } finally {
+      setPwSaving(false);
     }
   };
 
@@ -241,6 +259,42 @@ export default function CustomerProfile() {
           {saving
             ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             : <><Save size={17} /> حفظ التغييرات</>}
+        </button>
+      </div>
+      {/* ── Change password ─────────────────────────────────────────────── */}
+      <div className="card space-y-4">
+        <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <Lock size={17} className="text-primary-500" /> تغيير كلمة المرور
+        </h3>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كلمة المرور الحالية</label>
+          <div className="relative">
+            <Lock size={17} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="password" value={pwForm.current} onChange={e => setPwForm({ ...pwForm, current: e.target.value })}
+              className="input-field pr-10" placeholder="••••••" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كلمة المرور الجديدة</label>
+          <div className="relative">
+            <Lock size={17} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="password" value={pwForm.next} onChange={e => setPwForm({ ...pwForm, next: e.target.value })}
+              className="input-field pr-10" placeholder="6 أحرف على الأقل" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تأكيد كلمة المرور الجديدة</label>
+          <div className="relative">
+            <Lock size={17} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="password" value={pwForm.confirm} onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })}
+              className="input-field pr-10" placeholder="••••••" />
+          </div>
+        </div>
+        <button onClick={handleChangePassword} disabled={pwSaving}
+          className="btn-primary w-full flex items-center justify-center gap-2">
+          {pwSaving
+            ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            : <><Lock size={17} /> تغيير كلمة المرور</>}
         </button>
       </div>
 

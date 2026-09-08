@@ -110,4 +110,28 @@ router.delete('/avatar', async (req, res) => {
   }
 });
 
+// ── PUT /api/users/change-password ───────────────────────────────────────────
+// Any authenticated user can change their own password
+router.put('/change-password', async (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password) {
+    return res.status(400).json({ message: 'كلمة المرور الحالية والجديدة مطلوبتان' });
+  }
+  if (new_password.length < 6) {
+    return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل' });
+  }
+  try {
+    const result = await db.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    if (!result.rows.length) return res.status(404).json({ message: 'المستخدم غير موجود' });
+    const bcrypt = require('bcryptjs');
+    const match = await bcrypt.compare(current_password, result.rows[0].password_hash);
+    if (!match) return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة' });
+    const hashed = await bcrypt.hash(new_password, 10);
+    await db.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [hashed, req.user.id]);
+    res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

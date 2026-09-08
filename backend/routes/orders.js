@@ -69,10 +69,13 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ message: 'delivery_sub_type must be person or package' });
       }
 
-      // Server-side price verification — always look up from DB
+      // Server-side price verification — always look up from DB (bidirectional)
       const priceResult = await db.query(
         `SELECT price FROM delivery_route_prices
-         WHERE from_location_id = $1 AND to_location_id = $2 AND is_active = true`,
+         WHERE ((from_location_id = $1 AND to_location_id = $2)
+            OR  (from_location_id = $2 AND to_location_id = $1))
+           AND is_active = true
+         LIMIT 1`,
         [pickup_location_id, dropoff_location_id]
       );
       if (!priceResult.rows.length) {
@@ -270,7 +273,10 @@ router.post('/preview', async (req, res) => {
       }
       const priceResult = await db.query(
         `SELECT price FROM delivery_route_prices
-         WHERE from_location_id = $1 AND to_location_id = $2 AND is_active = true`,
+         WHERE ((from_location_id = $1 AND to_location_id = $2)
+            OR  (from_location_id = $2 AND to_location_id = $1))
+           AND is_active = true
+         LIMIT 1`,
         [pickup_location_id, dropoff_location_id]
       );
       if (!priceResult.rows.length) {
