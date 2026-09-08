@@ -9,6 +9,28 @@ const getPricingSettings = async () => {
   return settings;
 };
 
+const calculatePromoDiscount = async (promoCode, subtotal) => {
+  if (!promoCode) return 0;
+  let promoDiscount = 0;
+  const promoResult = await db.query(
+    'SELECT * FROM promo_codes WHERE code = $1 AND is_active = true AND (expires_at IS NULL OR expires_at > NOW())',
+    [promoCode.toUpperCase()]
+  );
+
+  if (promoResult.rows.length > 0) {
+    const promo = promoResult.rows[0];
+    if (subtotal >= (promo.min_order_amount || 0)) {
+      if (!promo.max_uses || promo.used_count < promo.max_uses) {
+        promoDiscount = promo.discount_type === 'percentage'
+          ? subtotal * (promo.discount_value / 100)
+          : promo.discount_value;
+        if (promoDiscount > subtotal) promoDiscount = subtotal;
+      }
+    }
+  }
+  return promoDiscount;
+};
+
 /**
  * NEW — Location-based pricing.
  *
@@ -66,25 +88,7 @@ const calculateLocationBasedPricing = async (locationIds, serviceType, itemsSubt
   let subtotal = deliveryFee + serviceFee + itemsSubtotal + placesFee;
 
   // ── Promo code ────────────────────────────────────────────────────────────
-  let promoDiscount = 0;
-  if (promoCode) {
-    const promoResult = await db.query(
-      'SELECT * FROM promo_codes WHERE code = $1 AND is_active = true AND (expires_at IS NULL OR expires_at > NOW())',
-      [promoCode.toUpperCase()]
-    );
-
-    if (promoResult.rows.length > 0) {
-      const promo = promoResult.rows[0];
-      if (subtotal >= (promo.min_order_amount || 0)) {
-        if (!promo.max_uses || promo.used_count < promo.max_uses) {
-          promoDiscount = promo.discount_type === 'percentage'
-            ? subtotal * (promo.discount_value / 100)
-            : promo.discount_value;
-          if (promoDiscount > subtotal) promoDiscount = subtotal;
-        }
-      }
-    }
-  }
+  const promoDiscount = await calculatePromoDiscount(promoCode, subtotal);
 
   const finalTotal = subtotal - promoDiscount;
 
@@ -132,25 +136,7 @@ const calculateOrderPricing = async (vehicleType, numLocations, serviceType, ite
     : (settings.ready_items_fee ?? 10);
 
   let subtotal = deliveryFee + serviceFee + itemsSubtotal;
-  let promoDiscount = 0;
-
-  if (promoCode) {
-    const promoResult = await db.query(
-      'SELECT * FROM promo_codes WHERE code = $1 AND is_active = true AND (expires_at IS NULL OR expires_at > NOW())',
-      [promoCode.toUpperCase()]
-    );
-    if (promoResult.rows.length > 0) {
-      const promo = promoResult.rows[0];
-      if (subtotal >= (promo.min_order_amount || 0)) {
-        if (!promo.max_uses || promo.used_count < promo.max_uses) {
-          promoDiscount = promo.discount_type === 'percentage'
-            ? subtotal * (promo.discount_value / 100)
-            : promo.discount_value;
-          if (promoDiscount > subtotal) promoDiscount = subtotal;
-        }
-      }
-    }
-  }
+  const promoDiscount = await calculatePromoDiscount(promoCode, subtotal);
 
   const finalTotal = subtotal - promoDiscount;
   const driverPct = settings.driver_percentage ?? 80;
@@ -175,6 +161,7 @@ const calculateOrderPricing = async (vehicleType, numLocations, serviceType, ite
 
 module.exports = {
   getPricingSettings,
+  calculatePromoDiscount,
   calculateLocationBasedPricing,
   calculateOrderPricing   // legacy
 };

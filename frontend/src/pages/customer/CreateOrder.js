@@ -62,6 +62,7 @@ export default function CreateOrder() {
     dropoff_location_id: '',
     dropoff_address: '',
     notes: '',
+    promo_code: '',
   });
 
   useEffect(() => {
@@ -78,15 +79,20 @@ export default function CreateOrder() {
   // ── Auto-lookup delivery route price when both locations selected ─────────
   useEffect(() => {
     if (!delivery.pickup_location_id || !delivery.dropoff_location_id) {
-      setDeliveryRoutePrice(null);
+      setPricing(null);
       return;
     }
     setLookingUpPrice(true);
-    api.get(`/delivery-prices/lookup?from=${delivery.pickup_location_id}&to=${delivery.dropoff_location_id}`)
-      .then(r => setDeliveryRoutePrice(r.data.price))
-      .catch(() => setDeliveryRoutePrice(null))
+    api.post('/orders/preview', {
+      service_type: 'delivery_service',
+      pickup_location_id: delivery.pickup_location_id,
+      dropoff_location_id: delivery.dropoff_location_id,
+      promo_code: delivery.promo_code
+    })
+      .then(r => setPricing(r.data))
+      .catch(() => setPricing(null))
       .finally(() => setLookingUpPrice(false));
-  }, [delivery.pickup_location_id, delivery.dropoff_location_id]);
+  }, [delivery.pickup_location_id, delivery.dropoff_location_id, delivery.promo_code]);
 
   // ── Shopping helpers ──────────────────────────────────────────────────────
   const addStop = () => {
@@ -226,7 +232,7 @@ export default function CreateOrder() {
           dropoff_location_id: delivery.dropoff_location_id,
           dropoff_address: delivery.dropoff_address,
           notes: delivery.notes,
-          delivery_price: deliveryRoutePrice
+          promo_code: delivery.promo_code
         };
       } else {
         const customer_address = form.locations.map(l => l.custom_address).filter(Boolean).join(' | ');
@@ -804,7 +810,16 @@ export default function CreateOrder() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات (اختياري)</label>
                 <textarea value={delivery.notes} onChange={e => setDelivery({ ...delivery, notes: e.target.value })}
-                  className="input-field" rows={2} placeholder="أي ملاحظات للسائق..." />
+                  className="input-field mb-3" rows={2} placeholder="أي ملاحظات للسائق..." />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كود خصم (إن وجد)</label>
+                <div className="relative">
+                  <input value={delivery.promo_code} onChange={e => setDelivery({ ...delivery, promo_code: e.target.value })}
+                    className="input-field pr-10 uppercase" placeholder="أدخل كود الخصم" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🎟</span>
+                </div>
               </div>
             </div>
           )}
@@ -845,9 +860,21 @@ export default function CreateOrder() {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-300 font-medium">سعر التوصيل</span>
-                  <span className="text-2xl font-bold text-primary-600">{deliveryRoutePrice} ج.م</span>
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-300 font-medium">سعر التوصيل</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{pricing?.deliveryFee} ج.م</span>
+                  </div>
+                  {pricing?.promoDiscount > 0 && (
+                    <div className="flex justify-between items-center text-green-600 mt-1">
+                      <span className="text-sm font-medium">خصم الكود</span>
+                      <span className="font-bold">-{pricing?.promoDiscount} ج.م</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <span className="font-bold text-gray-900 dark:text-white">الإجمالي</span>
+                    <span className="text-2xl font-bold text-primary-600">{pricing?.finalTotal} ج.م</span>
+                  </div>
                 </div>
               </div>
 
@@ -878,7 +905,7 @@ export default function CreateOrder() {
               </button>
             ) : (
               <button onClick={handleSubmit}
-                disabled={loading || (mode === 'shopping' && !pricing) || (mode === 'delivery' && deliveryRoutePrice === null)}
+                disabled={loading || (mode === 'shopping' && !pricing) || (mode === 'delivery' && !pricing)}
                 className="btn-primary flex items-center gap-2 disabled:opacity-60">
                 {loading
                   ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

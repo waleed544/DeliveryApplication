@@ -1,7 +1,7 @@
 const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const db = require('../config/db');
-const { calculateLocationBasedPricing } = require('../utils/calculations');
+const { calculateLocationBasedPricing, calculatePromoDiscount } = require('../utils/calculations');
 const socketManager = require('../socketManager');
 const router = express.Router();
 
@@ -87,9 +87,12 @@ router.post('/', async (req, res) => {
       const driverPct = ps.driver_percentage ?? 80;
       const ownerPct  = ps.owner_percentage  ?? 20;
 
-      const finalTotal    = routePrice;
-      const driverEarnings = finalTotal * (driverPct / 100);
-      const ownerEarnings  = finalTotal * (ownerPct  / 100);
+      const promoDiscount = await calculatePromoDiscount(promo_code, routePrice);
+      const finalTotal    = Math.max(0, routePrice - promoDiscount);
+      
+      const discountedFeeProfit = finalTotal;
+      const driverEarnings = discountedFeeProfit * (driverPct / 100);
+      const ownerEarnings  = discountedFeeProfit * (ownerPct  / 100);
 
       // Build customer_address from pickup + dropoff for display
       const pickupLoc   = await db.query('SELECT name_ar FROM locations WHERE id = $1', [pickup_location_id]);
@@ -113,7 +116,7 @@ router.post('/', async (req, res) => {
          RETURNING *`,
         [
           customerId, vehicle_id, 'delivery_service', 1,
-          routePrice, 0, 0, 0,
+          routePrice, 0, 0, promoDiscount,
           finalTotal, driverEarnings, ownerEarnings,
           registeredPhone, addrDisplay, notes || null,
           1, 0, JSON.stringify([]),
@@ -123,6 +126,17 @@ router.post('/', async (req, res) => {
       );
 
       const order = orderResult.rows[0];
+      
+      if (promo_code && promoDiscount > 0) {
+        const promoUsage = await client.query(
+          `UPDATE promo_codes SET used_count = used_count + 1
+           WHERE code = $1 AND is_active = true
+             AND (max_uses IS NULL OR used_count < max_uses)`,
+          [promo_code.toUpperCase()]
+        );
+        if (promoUsage.rowCount !== 1) throw new Error('Promo code is no longer available');
+      }
+
       await client.query("UPDATE orders SET status = 'finding_driver' WHERE id = $1", [order.id]);
       await client.query('COMMIT');
       client.release();
@@ -268,15 +282,20 @@ router.post('/preview', async (req, res) => {
       settings.rows.forEach(r => { ps[r.key] = parseFloat(r.value); });
       const driverPct  = ps.driver_percentage ?? 80;
       const ownerPct   = ps.owner_percentage  ?? 20;
+      
+      const promoDiscount = await calculatePromoDiscount(promo_code, routePrice);
+      const finalTotal = Math.max(0, routePrice - promoDiscount);
+      const discountedFeeProfit = finalTotal;
+
       return res.json({
         deliveryFee:     routePrice,
         serviceFee:      0,
         placesFee:       0,
         itemsSubtotal:   0,
-        promoDiscount:   0,
-        finalTotal:      routePrice,
-        driverEarnings:  routePrice * (driverPct / 100),
-        ownerEarnings:   routePrice * (ownerPct  / 100),
+        promoDiscount:   promoDiscount,
+        finalTotal:      finalTotal,
+        driverEarnings:  discountedFeeProfit * (driverPct / 100),
+        ownerEarnings:   discountedFeeProfit * (ownerPct  / 100),
         locationBreakdown: []
       });
     }
