@@ -800,7 +800,8 @@ export default function CreateOrder() {
                     <>
                       <AlertTriangle size={24} className="mx-auto text-amber-500 mb-1" />
                       <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">لم يتم تحديد سعر لهذا المسار بعد</p>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">تواصل مع المشرف لإضافة هذا المسار</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">تواصل مع المشرف لإضافة هذا المسار </p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">01019488741</p>
                     </>
                   )}
                 </div>
