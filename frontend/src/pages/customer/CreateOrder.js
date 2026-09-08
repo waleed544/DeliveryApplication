@@ -30,6 +30,8 @@ export default function CreateOrder() {
   const [step, setStep] = useState(1);
   const [pickupSearch, setPickupSearch] = useState('');
   const [dropoffSearch, setDropoffSearch] = useState('');
+  const [pickupOpen, setPickupOpen] = useState(false);
+  const [dropoffOpen, setDropoffOpen] = useState(false);
   const [mode, setMode] = useState(null); // null | 'shopping' | 'delivery'
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState([]);
@@ -715,17 +717,19 @@ export default function CreateOrder() {
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة</label>
                 <input
                   value={pickupSearch}
-                  onChange={e => { setPickupSearch(e.target.value); setDelivery({ ...delivery, pickup_location_id: '' }); }}
+                  onChange={e => { setPickupSearch(e.target.value); setDelivery({ ...delivery, pickup_location_id: '' }); setPickupOpen(true); }}
+                  onFocus={() => setPickupOpen(true)}
+                  onBlur={() => setTimeout(() => setPickupOpen(false), 150)}
                   className="input-field"
                   placeholder="ابحث عن المنطقة..."
                 />
-                {pickupSearch && !delivery.pickup_location_id && (
+                {pickupOpen && (
                   <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {locations.filter(l => l.name_ar.includes(pickupSearch)).length === 0 ? (
+                    {locations.filter(l => !pickupSearch || l.name_ar.includes(pickupSearch)).length === 0 ? (
                       <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
-                    ) : locations.filter(l => l.name_ar.includes(pickupSearch)).map(l => (
+                    ) : locations.filter(l => !pickupSearch || l.name_ar.includes(pickupSearch)).map(l => (
                       <button key={l.id} type="button"
-                        onClick={() => { setDelivery({ ...delivery, pickup_location_id: l.id }); setPickupSearch(l.name_ar); }}
+                        onMouseDown={() => { setDelivery({ ...delivery, pickup_location_id: l.id }); setPickupSearch(l.name_ar); setPickupOpen(false); }}
                         className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                         {l.name_ar}
                       </button>
@@ -756,17 +760,19 @@ export default function CreateOrder() {
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة</label>
                 <input
                   value={dropoffSearch}
-                  onChange={e => { setDropoffSearch(e.target.value); setDelivery({ ...delivery, dropoff_location_id: '' }); }}
+                  onChange={e => { setDropoffSearch(e.target.value); setDelivery({ ...delivery, dropoff_location_id: '' }); setDropoffOpen(true); }}
+                  onFocus={() => setDropoffOpen(true)}
+                  onBlur={() => setTimeout(() => setDropoffOpen(false), 150)}
                   className="input-field"
                   placeholder="ابحث عن المنطقة..."
                 />
-                {dropoffSearch && !delivery.dropoff_location_id && (
+                {dropoffOpen && (
                   <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {locations.filter(l => l.name_ar.includes(dropoffSearch)).length === 0 ? (
+                    {locations.filter(l => !dropoffSearch || l.name_ar.includes(dropoffSearch)).length === 0 ? (
                       <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
-                    ) : locations.filter(l => l.name_ar.includes(dropoffSearch)).map(l => (
+                    ) : locations.filter(l => !dropoffSearch || l.name_ar.includes(dropoffSearch)).map(l => (
                       <button key={l.id} type="button"
-                        onClick={() => { setDelivery({ ...delivery, dropoff_location_id: l.id }); setDropoffSearch(l.name_ar); }}
+                        onMouseDown={() => { setDelivery({ ...delivery, dropoff_location_id: l.id }); setDropoffSearch(l.name_ar); setDropoffOpen(false); }}
                         className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                         {l.name_ar}
                       </button>
