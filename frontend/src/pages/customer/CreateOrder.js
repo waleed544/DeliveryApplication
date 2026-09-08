@@ -32,6 +32,8 @@ export default function CreateOrder() {
   const [dropoffSearch, setDropoffSearch] = useState('');
   const [pickupOpen, setPickupOpen] = useState(false);
   const [dropoffOpen, setDropoffOpen] = useState(false);
+  const [stopSearch, setStopSearch] = useState([]);
+  const [stopOpen, setStopOpen] = useState([]);
   const [mode, setMode] = useState(null); // null | 'shopping' | 'delivery'
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState([]);
@@ -437,12 +439,39 @@ export default function CreateOrder() {
                         <button onClick={() => removeStop(idx)} className="text-red-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
                       )}
                     </div>
-                    <div>
+                    <div className="relative">
                       <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة (لتحديد السعر)</label>
-                      <select value={loc.location_id} onChange={e => updateStop(idx, 'location_id', e.target.value)} className="input-field text-sm">
-                        <option value="">اختر المنطقة الأقرب لك...</option>
-                        {locations.map(l => <option key={l.id} value={l.id}>{l.name_ar} — {l.delivery_price} ج.م</option>)}
-                      </select>
+                      <input
+                        value={stopSearch[idx] ?? (selectedLocation ? selectedLocation.name_ar + ' — ' + selectedLocation.delivery_price + ' ج.م' : '')}
+                        onChange={e => {
+                          const s = [...stopSearch]; s[idx] = e.target.value;
+                          setStopSearch(s);
+                          updateStop(idx, 'location_id', '');
+                          const o = [...stopOpen]; o[idx] = true; setStopOpen(o);
+                        }}
+                        onFocus={() => { const o = [...stopOpen]; o[idx] = true; setStopOpen(o); }}
+                        onBlur={() => setTimeout(() => { const o = [...stopOpen]; o[idx] = false; setStopOpen(o); }, 150)}
+                        className="input-field text-sm"
+                        placeholder="ابحث عن المنطقة..."
+                      />
+                      {stopOpen[idx] && (
+                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                          {locations.filter(l => !stopSearch[idx] || l.name_ar.includes(stopSearch[idx])).length === 0 ? (
+                            <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
+                          ) : locations.filter(l => !stopSearch[idx] || l.name_ar.includes(stopSearch[idx])).map(l => (
+                            <button key={l.id} type="button"
+                              onMouseDown={() => {
+                                updateStop(idx, 'location_id', l.id);
+                                const s = [...stopSearch]; s[idx] = l.name_ar + ' — ' + l.delivery_price + ' ج.م'; setStopSearch(s);
+                                const o = [...stopOpen]; o[idx] = false; setStopOpen(o);
+                              }}
+                              className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                              <span className="font-medium">{l.name_ar}</span>
+                              <span className="text-xs text-primary-600 mr-2">{l.delivery_price} ج.م</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {selectedLocation && (
                         <p className="text-xs text-primary-600 dark:text-primary-400 mt-1 font-semibold">
                           💰 سعر التوصيل لهذه المنطقة: {selectedLocation.delivery_price} ج.م
