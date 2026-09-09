@@ -77,13 +77,11 @@ export default function AdminPricing() {
   };
 
   // Legacy keys that are no longer used (system now uses per-location pricing)
-  const HIDDEN_KEYS = ['motorcycle_base', 'tuk_tuk_base', 'car_base', 'additional_location'];
+  const HIDDEN_KEYS = ['motorcycle_base', 'tuk_tuk_base', 'car_base', 'additional_location', 'ready_items_fee', 'driver_purchase_fee'];
 
   const labels = {
     tuk_tuk_surcharge: 'توك توك — رسوم إضافية (فوق سعر المنطقة)',
     car_surcharge:     'سيارة — رسوم إضافية (فوق سعر المنطقة)',
-    ready_items_fee:   'رسوم الطلبات الجاهزة',
-    driver_purchase_fee: 'رسوم شراء السائق',
     driver_percentage: 'نسبة السائق %',
     owner_percentage:  'نسبة المالك %',
     min_order_amount:  'الحد الأدنى للطلب (يُستخدم عند عدم اختيار منطقة)',

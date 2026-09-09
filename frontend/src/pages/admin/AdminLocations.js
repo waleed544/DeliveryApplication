@@ -11,6 +11,7 @@ export default function AdminLocations() {
   const [editValues, setEditValues] = useState({});
   const [form, setForm] = useState({ name_ar: '', name_en: '', delivery_price: '', sort_order: 0 });
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
 
   useEffect(() => { fetchLocations(); }, []);
 
@@ -81,6 +82,10 @@ export default function AdminLocations() {
 
   // Total delivery price sum (informational)
   const activeCount = locations.filter(l => l.is_active).length;
+  const filteredLocations = locations.filter(l =>
+    l.name_ar?.toLowerCase().includes(search.toLowerCase()) ||
+    l.name_en?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -97,6 +102,17 @@ export default function AdminLocations() {
         >
           <Plus size={18} /> إضافة منطقة
         </button>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="input-field pr-10"
+          placeholder="ابحث عن منطقة..."
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
       </div>
 
       {/* Driver start point notice */}
@@ -163,13 +179,8 @@ export default function AdminLocations() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {locations.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-center py-10 text-gray-400">
-                    <MapPin size={32} className="mx-auto mb-2 opacity-30" />
-                    لا توجد مناطق مضافة بعد
-                  </td>
-                </tr>
+              {filteredLocations.length === 0 && (
+                <tr><td colSpan={4} className="text-center py-8 text-gray-400">لا توجد نتائج</td></tr>
               )}
               {locations.map(loc => (
                 <tr key={loc.id} className={`transition-colors ${!loc.is_active ? 'opacity-50' : ''} hover:bg-gray-50 dark:hover:bg-gray-800/40`}>

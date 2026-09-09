@@ -141,15 +141,15 @@ export default function CreateOrder() {
   // DELIVERY steps: 1(vehicle) → 2(service-select) → D1(subtype) → D2(pickup) → D3(dropoff) → D4(review)
   // We encode delivery steps as 10+n so they don't conflict with shopping steps
 
-  const SHOPPING_TOTAL = 6;
+  const SHOPPING_TOTAL = 5;
   const DELIVERY_STEPS = [10, 11, 12, 13]; // D1..D4
 
   const isDeliveryStep = step >= 10;
   const isLastStep = mode === 'shopping' ? step === SHOPPING_TOTAL : step === 13;
 
-  // Trigger shopping preview on step 6
+  // Trigger shopping preview on step 5
   useEffect(() => {
-    if (step === 6 && mode === 'shopping' && form.vehicle_id) previewPricing();
+    if (step === 5 && mode === 'shopping' && form.vehicle_id) previewPricing();
   }, [step]); // eslint-disable-line
 
   const canAdvance = () => {
@@ -563,43 +563,8 @@ export default function CreateOrder() {
             </div>
           )}
 
-          {/* ── Step 5: Service sub-type (shopping) ──────────────────────────── */}
+          {/* ── Step 5: Shopping Review ──────────────────────────────────────── */}
           {step === 5 && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-900 dark:text-white">نوع الطلب</h3>
-              <button onClick={() => setForm({ ...form, service_type: 'ready_items', items: [] })}
-                className={`w-full card text-right transition-all ${form.service_type === 'ready_items' ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''}`}>
-                <p className="font-bold text-gray-900 dark:text-white mb-1">📦 الطلبات جاهزة</p>
-                <p className="text-sm text-gray-500">السائق يأخذ الطلبات الجاهزة ويوصلها فقط</p>
-                {pricingSettings['ready_items_fee'] > 0 ? (
-                  <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 px-2 py-0.5 rounded-full">
-                    + {pricingSettings['ready_items_fee']} ج.م رسوم خدمة
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 px-2 py-0.5 rounded-full">
-                    ✓ لا رسوم إضافية
-                  </span>
-                )}
-              </button>
-              <button onClick={() => setForm({ ...form, service_type: 'driver_purchase' })}
-                className={`w-full card text-right transition-all ${form.service_type === 'driver_purchase' ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''}`}>
-                <p className="font-bold text-gray-900 dark:text-white mb-1">🛒 السائق يشتري</p>
-                <p className="text-sm text-gray-500">اطلب من السائق شراء المنتجات نيابة عنك</p>
-                {pricingSettings['driver_purchase_fee'] > 0 ? (
-                  <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 px-2 py-0.5 rounded-full">
-                    + {pricingSettings['driver_purchase_fee']} ج.م رسوم خدمة شراء
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 px-2 py-0.5 rounded-full">
-                    ✓ لا رسوم إضافية
-                  </span>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* ── Step 6: Shopping Review ──────────────────────────────────────── */}
-          {step === 6 && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-900 dark:text-white">مراجعة الطلب</h3>
               <div className="card flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
