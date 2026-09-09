@@ -182,7 +182,7 @@ export default function AdminLocations() {
               {filteredLocations.length === 0 && (
                 <tr><td colSpan={4} className="text-center py-8 text-gray-400">لا توجد نتائج</td></tr>
               )}
-              {locations.map(loc => (
+              {filteredLocations.map(loc => (
                 <tr key={loc.id} className={`transition-colors ${!loc.is_active ? 'opacity-50' : ''} hover:bg-gray-50 dark:hover:bg-gray-800/40`}>
 
                   {/* Name cell */}
