@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { CheckCircle, XCircle, Eye, EyeOff, Trash2, Store, MapPin, Phone } from "lucide-react";
 import toast from "react-hot-toast";
