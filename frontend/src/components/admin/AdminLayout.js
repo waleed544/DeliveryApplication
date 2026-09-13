@@ -23,9 +23,10 @@ export default function AdminLayout() {
     { path: '/admin/pricing',         icon: <DollarSign size={18} />,      label: 'الأسعار'           },
     { path: '/admin/delivery-prices',  icon: <Route size={18} />,           label: 'أسعار التوصيل'    },
     { path: '/admin/place-options',    icon: <Store size={18} />,           label: 'خيارات الأماكن'    },
-    { path: '/admin/complaints',   icon: <AlertTriangle size={18} />,   label: 'الشكاوى'        },
-    { path: '/admin/settings',     icon: <Settings size={18} />,        label: 'إعدادات المنصة' },
-    { path: '/admin/banners',      icon: <Image size={18} />,            label: 'إعلانات التطبيق' },
+    { path: '/admin/complaints',         icon: <AlertTriangle size={18} />,   label: 'الشكاوى'        },
+    { path: '/admin/commercial',          icon: <Store size={18} />,            label: 'حسابات تجارية'    },
+    { path: '/admin/settings',            icon: <Settings size={18} />,         label: 'إعدادات المنصة' },
+    { path: '/admin/banners',             icon: <Image size={18} />,            label: 'إعلانات التطبيق' },
   ];
 
   const isActive = (path) =>

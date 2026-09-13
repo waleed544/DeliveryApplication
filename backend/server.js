@@ -169,6 +169,8 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/place-options', require('./routes/placeOptions'));
 app.use('/api/banners', require('./routes/banners'));
 app.use('/api/delivery-prices', require('./routes/deliveryPrices'));
+app.use('/api/businesses', require('./routes/businesses'));
+
 
 // Health check
 app.get('/api/health', (req, res) => {

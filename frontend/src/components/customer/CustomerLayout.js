@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { Home, Package, User, LogOut, PhoneCall } from 'lucide-react';
+import { Home, Package, User, LogOut, PhoneCall, Store } from 'lucide-react';
 import BannerSlider from '../common/BannerSlider';
 import BrandLogo from '../common/BrandLogo';
 
@@ -22,6 +22,7 @@ export default function CustomerLayout() {
   const navItems = [
     { path: '/customer', icon: <Home size={22} />, label: 'الرئيسية' },
     { path: '/customer/orders', icon: <Package size={22} />, label: 'طلباتي' },
+    { path: '/customer/businesses', icon: <Store size={22} />, label: 'دليل المحلات' },
     { path: '/customer/profile', icon: <User size={22} />, label: 'حسابي' },
   ];
 

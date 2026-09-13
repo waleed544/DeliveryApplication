@@ -64,6 +64,58 @@ router.post('/register/customer', [
   }
 });
 
+// Register Commercial Account
+router.post('/register/commercial', [
+  body('phone').notEmpty().withMessage('رقم الهاتف مطلوب'),
+  body('password').isLength({ min: 6 }).withMessage('كلمة المرور 6 أحرف على الأقل'),
+  body('name').notEmpty().withMessage('الاسم مطلوب'),
+  body('business_name').notEmpty().withMessage('اسم النشاط التجاري مطلوب'),
+  body('business_location_id').notEmpty().withMessage('يجب تحديد موقع النشاط')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const client = await db.pool.connect();
+  try {
+    const { phone, password, name, business_name, business_location_id, business_phone, business_description } = req.body;
+
+    const existing = await client.query('SELECT id FROM users WHERE phone = $1', [phone]);
+    if (existing.rows.length > 0) {
+      client.release();
+      return res.status(400).json({ message: 'رقم الهاتف مسجل بالفعل — يمكنك تسجيل الدخول' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await client.query('BEGIN');
+
+    const userResult = await client.query(
+      'INSERT INTO users (phone, email, password_hash, name, role) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [phone, null, hashedPassword, name, 'customer']
+    );
+    const user = userResult.rows[0];
+
+    await client.query(
+      `INSERT INTO customers (user_id, account_type, business_name, business_location_id, business_phone, business_description, is_approved_commercial)
+       VALUES ($1, 'commercial', $2, $3, $4, $5, false)`,
+      [user.id, business_name, business_location_id || null, business_phone || null, business_description || null]
+    );
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      message: 'تم تسجيل طلبك — سيتم تفعيل حسابك التجاري بعد موافقة المشرف'
+    });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (error.code === '23505') {
+      return res.status(400).json({ message: 'رقم الهاتف مسجل بالفعل' });
+    }
+    res.status(500).json({ message: 'فشل إنشاء الحساب', error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
 // Register Driver
 router.post('/register/driver', [
   body('phone').notEmpty().withMessage('رقم الهاتف مطلوب'),
@@ -165,6 +217,14 @@ router.post('/login', [
       }
     }
 
+    // Check commercial account approval
+    if (user.role === 'customer') {
+      const custResult = await db.query('SELECT account_type, is_approved_commercial FROM customers WHERE user_id = $1', [user.id]);
+      if (custResult.rows.length > 0 && custResult.rows[0].account_type === 'commercial' && !custResult.rows[0].is_approved_commercial) {
+        return res.status(403).json({ message: 'Commercial account pending approval', commercial_pending: true });
+      }
+    }
+
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
@@ -191,7 +251,13 @@ router.get('/me', async (req, res) => {
     let profile = null;
 
     if (user.role === 'customer') {
-      const cust = await db.query('SELECT * FROM customers WHERE user_id = $1', [user.id]);
+      const cust = await db.query(
+        `SELECT c.*, l.name_ar as business_location_name
+         FROM customers c
+         LEFT JOIN locations l ON c.business_location_id = l.id
+         WHERE c.user_id = $1`,
+        [user.id]
+      );
       profile = cust.rows[0] || null;
     } else if (user.role === 'driver') {
       const drv = await db.query(`SELECT d.*, v.type as vehicle_type, v.name_ar, v.name_en, v.icon 

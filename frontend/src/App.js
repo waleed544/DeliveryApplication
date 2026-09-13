@@ -20,6 +20,7 @@ import CreateOrder from './pages/customer/CreateOrder';
 import OrderTracking from './pages/customer/OrderTracking';
 import CustomerOrders from './pages/customer/CustomerOrders';
 import CustomerProfile from './pages/customer/CustomerProfile';
+import BusinessDirectory from './pages/customer/BusinessDirectory';
 
 // Driver
 import DriverDashboard from './pages/driver/DriverDashboard';
@@ -40,6 +41,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminDriverBalance from './pages/admin/AdminDriverBalance';
 import AdminBanners from './pages/admin/AdminBanners';
 import AdminDeliveryPrices from './pages/admin/AdminDeliveryPrices';
+import AdminCommercialAccounts from './pages/admin/AdminCommercialAccounts';
 
 function App() {
   const { user, loading } = useAuth();
@@ -69,6 +71,7 @@ function App() {
           <Route path="orders" element={<CustomerOrders />} />
           <Route path="orders/:id" element={<OrderTracking />} />
           <Route path="chat/:orderId" element={<ChatWindow />} />
+          <Route path="businesses" element={<BusinessDirectory />} />
           <Route path="profile" element={<CustomerProfile />} />
         </Route>
 
@@ -90,6 +93,7 @@ function App() {
           <Route path="place-options" element={<AdminPlaceOptions />} />
           <Route path="complaints" element={<AdminComplaints />} />
           <Route path="customers" element={<AdminCustomers />} />
+          <Route path="commercial" element={<AdminCommercialAccounts />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="banners" element={<AdminBanners />} />
           <Route path="delivery-prices" element={<AdminDeliveryPrices />} />

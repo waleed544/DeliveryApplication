@@ -24,6 +24,8 @@ export default function Login() {
       const msg    = err.response?.data?.message || '';
       if (status === 401) {
         toast.error('رقم الهاتف أو كلمة المرور غير صحيحة');
+      } else if (status === 403 && err.response?.data?.commercial_pending) {
+        toast.error('🏪 حسابك التجاري قيد المراجعة — سيتم تفعيله بعد موافقة المشرف');
       } else if (status === 403 && msg.includes('pending')) {
         toast.error('حسابك قيد المراجعة — سيتواصل معك المشرف قريباً');
       } else if (status === 403 && msg.includes('deactivated')) {

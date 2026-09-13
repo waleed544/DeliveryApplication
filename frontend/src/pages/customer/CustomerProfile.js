@@ -250,6 +250,37 @@ export default function CustomerProfile() {
           </div>
         </div>
 
+        {/* Commercial Info (Read-only for now) */}
+        {profile?.account_type === 'commercial' && (
+          <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-800">
+            <h4 className="font-bold text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
+              <MapPin size={17} /> بيانات النشاط التجاري
+            </h4>
+            <div className="space-y-3 bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-800/50">
+              <div>
+                <span className="block text-xs text-amber-600 dark:text-amber-500 mb-0.5">اسم النشاط</span>
+                <span className="font-medium text-gray-900 dark:text-white">{profile.business_name}</span>
+              </div>
+              <div>
+                <span className="block text-xs text-amber-600 dark:text-amber-500 mb-0.5">موقع النشاط</span>
+                <span className="font-medium text-gray-900 dark:text-white">{profile.business_location_name || '—'}</span>
+              </div>
+              {profile.business_phone && (
+                <div>
+                  <span className="block text-xs text-amber-600 dark:text-amber-500 mb-0.5">هاتف النشاط</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{profile.business_phone}</span>
+                </div>
+              )}
+              {profile.business_description && (
+                <div>
+                  <span className="block text-xs text-amber-600 dark:text-amber-500 mb-0.5">الوصف</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{profile.business_description}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handleSave}
           disabled={saving}

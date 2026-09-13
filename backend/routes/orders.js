@@ -11,7 +11,7 @@ router.use(authenticate);
 router.post('/', async (req, res) => {
   let client;
   try {
-    const {
+    let {
       vehicle_id,
       service_type,
       // مشتريات fields
@@ -49,12 +49,30 @@ router.post('/', async (req, res) => {
     }
 
     const customerResult = await db.query(
-      'SELECT c.id, u.phone FROM customers c JOIN users u ON c.user_id = u.id WHERE c.user_id = $1',
+      `SELECT c.id, c.account_type, c.business_name, c.business_location_id, 
+              l.name_ar as business_location_name, u.phone 
+       FROM customers c 
+       JOIN users u ON c.user_id = u.id 
+       LEFT JOIN locations l ON c.business_location_id = l.id
+       WHERE c.user_id = $1`,
       [req.user.id]
     );
     if (customerResult.rows.length === 0) return res.status(404).json({ message: 'Customer not found' });
-    const customerId = customerResult.rows[0].id;
-    const registeredPhone = customerResult.rows[0].phone;
+    const { id: customerId, phone: registeredPhone, account_type, business_name, business_location_id, business_location_name } = customerResult.rows[0];
+
+    // Backend enforcement for commercial accounts
+    if (account_type === 'commercial' && business_location_id) {
+      if (service_type === 'delivery_service') {
+        pickup_location_id = business_location_id;
+        pickup_address = business_location_name || business_name || '';
+      } else {
+        if (locations && locations.length > 0) {
+          locations[0].location_id = business_location_id;
+          locations[0].custom_address = business_location_name || business_name || '';
+          locations[0].name = business_location_name || '';
+        }
+      }
+    }
 
     const vehicleResult = await db.query('SELECT type FROM vehicles WHERE id = $1', [vehicle_id]);
     if (vehicleResult.rows.length === 0) throw new Error('Invalid vehicle');

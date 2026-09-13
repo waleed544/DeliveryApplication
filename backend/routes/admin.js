@@ -678,5 +678,66 @@ router.get('/drivers/:id/balance-transactions', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// ── Commercial Accounts Management ──────────────────────────────────────────
+
+// List all commercial accounts
+router.get('/commercial-accounts', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT c.id, c.business_name, c.business_description, c.business_phone,
+              c.business_location_id, c.show_in_directory, c.is_approved_commercial,
+              c.account_type, c.created_at,
+              l.name_ar as location_name,
+              u.name as owner_name, u.phone as owner_phone, u.id as user_id, u.is_active
+       FROM customers c
+       JOIN users u ON c.user_id = u.id
+       LEFT JOIN locations l ON c.business_location_id = l.id
+       WHERE c.account_type = 'commercial'
+       ORDER BY c.is_approved_commercial ASC, c.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Approve / reject commercial account
+router.put('/commercial-accounts/:id/approve', async (req, res) => {
+  try {
+    const { approve } = req.body; // true or false
+    await db.query(
+      'UPDATE customers SET is_approved_commercial = $1 WHERE id = $2 AND account_type = $3',
+      [approve !== false, req.params.id, 'commercial']
+    );
+    res.json({ message: approve !== false ? 'تم الموافقة' : 'تم الرفض' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Toggle directory visibility
+router.put('/commercial-accounts/:id/toggle-directory', async (req, res) => {
+  try {
+    const result = await db.query(
+      'UPDATE customers SET show_in_directory = NOT show_in_directory WHERE id = $1 AND account_type = $2 RETURNING show_in_directory',
+      [req.params.id, 'commercial']
+    );
+    res.json({ show_in_directory: result.rows[0]?.show_in_directory });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete commercial account
+router.delete('/commercial-accounts/:id', async (req, res) => {
+  try {
+    const custRow = await db.query('SELECT user_id FROM customers WHERE id = $1 AND account_type = $2', [req.params.id, 'commercial']);
+    if (custRow.rows.length === 0) return res.status(404).json({ message: 'Account not found' });
+    await db.query('UPDATE users SET is_active = false WHERE id = $1', [custRow.rows[0].user_id]);
+    res.json({ message: 'تم تعطيل الحساب' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;

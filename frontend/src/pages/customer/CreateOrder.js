@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import { useSiteStatus } from '../../context/SiteStatusContext';
 import {
   ChevronLeft, ChevronRight, MapPin, Package, ShoppingCart, Tag,
@@ -44,6 +45,7 @@ export default function CreateOrder() {
   const [lookingUpPrice, setLookingUpPrice] = useState(false);
   const navigate = useNavigate();
   const { accepting_orders, offline_message } = useSiteStatus();
+  const { isCommercial, businessProfile } = useAuth();
 
   // ── Shopping form state ───────────────────────────────────────────────────
   const [form, setForm] = useState({
@@ -195,7 +197,32 @@ export default function CreateOrder() {
 
     if (step === 2) {
       // Branch into the correct flow
-      setStep(mode === 'delivery' ? 10 : 3);
+      if (mode === 'delivery') {
+        setStep(10); // always go to 10 first
+      } else {
+        // Shopping: pre-fill first stop for commercial
+        if (isCommercial && businessProfile?.business_location_id) {
+          setForm(f => ({
+            ...f,
+            locations: [
+              { location_id: businessProfile.business_location_id, custom_address: businessProfile.business_location_name || businessProfile.business_name || '', name: businessProfile.business_location_name || '' },
+              ...f.locations.slice(1)
+            ]
+          }));
+        }
+        setStep(3);
+      }
+    } else if (step === 10) {
+      if (isCommercial && businessProfile?.business_location_id) {
+        setDelivery(d => ({
+          ...d,
+          pickup_location_id: businessProfile.business_location_id,
+          pickup_address: businessProfile.business_location_name || businessProfile.business_name || ''
+        }));
+        setStep(12); // skip step 11
+      } else {
+        setStep(11);
+      }
     } else if (isDeliveryStep) {
       if (step === 13) return; // last delivery step — handled by submit
       setStep(step + 1);
@@ -206,6 +233,7 @@ export default function CreateOrder() {
 
   const handleBack = () => {
     if (step === 3 || step === 10) { setStep(2); } // both branch back to service select
+    else if (step === 12 && isCommercial && businessProfile?.business_location_id) { setStep(10); } // skip step 11 backwards too
     else if (isDeliveryStep) setStep(step - 1);
     else setStep(step - 1);
   };
@@ -431,6 +459,7 @@ export default function CreateOrder() {
               </div>
               {form.locations.map((loc, idx) => {
                 const selectedLocation = locations.find(l => l.id === loc.location_id);
+                const isBusinessStop = isCommercial && idx === 0 && businessProfile?.business_location_id;
                 return (
                   <div key={idx} className="card space-y-3 border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
@@ -439,45 +468,56 @@ export default function CreateOrder() {
                         <button onClick={() => removeStop(idx)} className="text-red-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
                       )}
                     </div>
-                    <div className="relative">
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة (لتحديد السعر)</label>
-                      <input
-                        value={stopSearch[idx] ?? (selectedLocation ? selectedLocation.name_ar + ' — ' + selectedLocation.delivery_price + ' ج.م' : '')}
-                        onChange={e => {
-                          const s = [...stopSearch]; s[idx] = e.target.value;
-                          setStopSearch(s);
-                          updateStop(idx, 'location_id', '');
-                          const o = [...stopOpen]; o[idx] = true; setStopOpen(o);
-                        }}
-                        onFocus={() => { const o = [...stopOpen]; o[idx] = true; setStopOpen(o); }}
-                        onBlur={() => setTimeout(() => { const o = [...stopOpen]; o[idx] = false; setStopOpen(o); }, 150)}
-                        className="input-field text-sm"
-                        placeholder="ابحث عن المنطقة..."
-                      />
-                      {stopOpen[idx] && (
-                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                          {locations.filter(l => !stopSearch[idx] || l.name_ar.includes(stopSearch[idx])).length === 0 ? (
-                            <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
-                          ) : locations.filter(l => !stopSearch[idx] || l.name_ar.includes(stopSearch[idx])).map(l => (
-                            <button key={l.id} type="button"
-                              onMouseDown={() => {
-                                updateStop(idx, 'location_id', l.id);
-                                const s = [...stopSearch]; s[idx] = l.name_ar + ' — ' + l.delivery_price + ' ج.م'; setStopSearch(s);
-                                const o = [...stopOpen]; o[idx] = false; setStopOpen(o);
-                              }}
-                              className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
-                              <span className="font-medium">{l.name_ar}</span>
-                              <span className="text-xs text-primary-600 mr-2">{l.delivery_price} ج.م</span>
-                            </button>
-                          ))}
+                    {isBusinessStop ? (
+                      <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
+                        <Store size={16} className="text-amber-500 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">موقع عملك (تلقائي)</p>
+                          <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{businessProfile.business_name}</p>
+                          <p className="text-xs text-amber-600">{businessProfile.business_location_name}</p>
                         </div>
-                      )}
-                      {selectedLocation && (
-                        <p className="text-xs text-primary-600 dark:text-primary-400 mt-1 font-semibold">
-                          💰 سعر التوصيل لهذه المنطقة: {selectedLocation.delivery_price} ج.م
-                        </p>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة (لتحديد السعر)</label>
+                        <input
+                          value={stopSearch[idx] ?? (selectedLocation ? selectedLocation.name_ar + ' — ' + selectedLocation.delivery_price + ' ج.م' : '')}
+                          onChange={e => {
+                            const s = [...stopSearch]; s[idx] = e.target.value;
+                            setStopSearch(s);
+                            updateStop(idx, 'location_id', '');
+                            const o = [...stopOpen]; o[idx] = true; setStopOpen(o);
+                          }}
+                          onFocus={() => { const o = [...stopOpen]; o[idx] = true; setStopOpen(o); }}
+                          onBlur={() => setTimeout(() => { const o = [...stopOpen]; o[idx] = false; setStopOpen(o); }, 150)}
+                          className="input-field text-sm"
+                          placeholder="ابحث عن المنطقة..."
+                        />
+                        {stopOpen[idx] && (
+                          <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                            {locations.filter(l => !stopSearch[idx] || l.name_ar.includes(stopSearch[idx])).length === 0 ? (
+                              <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
+                            ) : locations.filter(l => !stopSearch[idx] || l.name_ar.includes(stopSearch[idx])).map(l => (
+                              <button key={l.id} type="button"
+                                onMouseDown={() => {
+                                  updateStop(idx, 'location_id', l.id);
+                                  const s = [...stopSearch]; s[idx] = l.name_ar + ' — ' + l.delivery_price + ' ج.م'; setStopSearch(s);
+                                  const o = [...stopOpen]; o[idx] = false; setStopOpen(o);
+                                }}
+                                className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                                <span className="font-medium">{l.name_ar}</span>
+                                <span className="text-xs text-primary-600 mr-2">{l.delivery_price} ج.م</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {selectedLocation && (
+                          <p className="text-xs text-primary-600 dark:text-primary-400 mt-1 font-semibold">
+                            💰 سعر التوصيل لهذه المنطقة: {selectedLocation.delivery_price} ج.م
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Home size={11} /> العنوان التفصيلي (للسائق)</label>
                       <input value={loc.custom_address} onChange={e => updateStop(idx, 'custom_address', e.target.value)}
@@ -740,6 +780,18 @@ export default function CreateOrder() {
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">ادخل عنوانك ثم ادخل العنوان التفصيلي </p>
               </div>
+
+              {isCommercial && businessProfile?.business_location_id && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl mb-4">
+                  <Store size={16} className="text-amber-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">موقع الانطلاق (تلقائي)</p>
+                    <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{businessProfile.business_name}</p>
+                    <p className="text-xs text-amber-600">{businessProfile.business_location_name}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="relative">
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة</label>
                 <input
