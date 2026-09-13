@@ -74,14 +74,31 @@ export default function CreateOrder() {
 
   useEffect(() => {
     api.get('/locations').then(r => setLocations(r.data)).catch(() => {});
-    api.get('/vehicles').then(r => { if (r) setVehicles(r.data); }).catch(() => {});
+    api.get('/vehicles').then(r => { 
+      if (r) {
+        setVehicles(r.data); 
+        // Commercial Auto-Start Logic
+        if (isCommercial && businessProfile?.business_location_id) {
+          setMode('delivery');
+          setDelivery(d => ({
+            ...d,
+            sub_type: 'package',
+            pickup_location_id: businessProfile.business_location_id,
+            pickup_address: businessProfile.business_location_name || businessProfile.business_name || ''
+          }));
+          const moto = r.data.find(v => v.type === 'motorcycle') || r.data[0];
+          if (moto) setForm(f => ({ ...f, vehicle_id: moto.id }));
+          setStep(12);
+        }
+      }
+    }).catch(() => {});
     api.get('/place-options').then(r => setPlaceOptions(r.data)).catch(() => {});
     api.get('/pricing').then(r => {
       const map = {};
       r.data.forEach(s => { map[s.key] = parseFloat(s.value) || 0; });
       setPricingSettings(map);
     }).catch(() => {});
-  }, []);
+  }, [isCommercial, businessProfile]);
 
   // ── Auto-lookup delivery route price when both locations selected ─────────
   useEffect(() => {
@@ -232,6 +249,10 @@ export default function CreateOrder() {
   };
 
   const handleBack = () => {
+    if (isCommercial && businessProfile?.business_location_id) {
+      if (step === 13) setStep(12);
+      return; // Cannot go back beyond 12
+    }
     if (step === 3 || step === 10) { setStep(2); } // both branch back to service select
     else if (step === 12 && isCommercial && businessProfile?.business_location_id) { setStep(10); } // skip step 11 backwards too
     else if (isDeliveryStep) setStep(step - 1);
@@ -307,7 +328,9 @@ export default function CreateOrder() {
     { num: 13, title: 'مراجعة',   icon: <CheckCircle size={14} /> },
   ];
 
-  const activeSteps = mode === 'delivery' ? deliverySteps : shoppingSteps;
+  const activeSteps = isCommercial 
+    ? deliverySteps.filter(s => s.num >= 12)
+    : (mode === 'delivery' ? deliverySteps : shoppingSteps);
   const locationPrice = (id) => { const l = locations.find(x => x.id === id); return l ? parseFloat(l.delivery_price) || 0 : 0; };
   const selectedPlacesOption = placeOptions.find(o => o.id === form._selected_option_id);
   const pickupArea  = locations.find(l => l.id === delivery.pickup_location_id);
