@@ -57,9 +57,9 @@ export default function Register() {
       } else {
         if (!form.business_location_id) { toast.error("اختر موقع النشاط التجاري"); setLoading(false); return; }
         await api.post("/auth/register/commercial", {
-          name: form.name, phone: form.phone, password: form.password,
+          name: form.business_name, phone: form.phone, password: form.password,
           business_name: form.business_name, business_location_id: form.business_location_id,
-          business_phone: form.business_phone, business_description: form.business_description
+          business_phone: form.business_phone
         });
         toast.success("تم تسجيل طلبك — سيتم تفعيل حسابك التجاري بعد موافقة المشرف");
         navigate("/login");
@@ -108,9 +108,11 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Common fields */}
-            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الاسم الكامل</label>
-              <div className="relative"><User size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input name="name" value={form.name} onChange={handleChange} className="input-field pr-10" placeholder="محمد أحمد" required /></div></div>
+            {role !== 'commercial' && (
+              <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الاسم الكامل</label>
+                <div className="relative"><User size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input name="name" value={form.name} onChange={handleChange} className="input-field pr-10" placeholder="محمد أحمد" required /></div></div>
+            )}
             <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف</label>
               <div className="relative"><Phone size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input name="phone" value={form.phone} onChange={handleChange} className="input-field pr-10" placeholder="01XXXXXXXXX" required /></div></div>
@@ -168,8 +170,6 @@ export default function Register() {
 
                 <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رقم هاتف النشاط (اختياري)</label>
                   <input name="business_phone" value={form.business_phone} onChange={handleChange} className="input-field" placeholder="01XXXXXXXXX" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">وصف النشاط (اختياري)</label>
-                  <textarea name="business_description" value={form.business_description} onChange={handleChange} className="input-field" rows={2} placeholder="وصف مختصر عن نشاطك التجاري..." /></div>
               </>
             )}
 
