@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../utils/api";
@@ -45,33 +45,33 @@ export default function Register() {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data.user));
         setUser(res.data.user);
-        toast.success("?????? ??! ?? ????? ????? ????? ??");
+        toast.success("مرحباً بك! تم إنشاء حسابك بنجاح ❤️");
         navigate("/customer");
       } else if (role === "driver") {
         await api.post("/auth/register/driver", {
           name: form.name, phone: form.phone, password: form.password,
           vehicle_id: form.vehicle_id, vehicle_plate: form.vehicle_plate, national_id: form.national_id
         });
-        toast.success("?? ????? ???? � ???? ????? ????? ??? ?????? ??????");
+        toast.success("تم تسجيل طلبك — سيتم تفعيل حسابك بعد موافقة المشرف");
         navigate("/login");
       } else {
-        if (!form.business_location_id) { toast.error("???? ???? ?????? ???????"); setLoading(false); return; }
+        if (!form.business_location_id) { toast.error("اختر موقع النشاط التجاري"); setLoading(false); return; }
         await api.post("/auth/register/commercial", {
           name: form.name, phone: form.phone, password: form.password,
           business_name: form.business_name, business_location_id: form.business_location_id,
           business_phone: form.business_phone, business_description: form.business_description
         });
-        toast.success("?? ????? ???? � ???? ????? ????? ??????? ??? ?????? ??????");
+        toast.success("تم تسجيل طلبك — سيتم تفعيل حسابك التجاري بعد موافقة المشرف");
         navigate("/login");
       }
     } catch (err) {
       const msg = err.response?.data?.message || "";
-      if (msg.toLowerCase().includes("phone") || msg.includes("????") || msg.includes("already")) {
-        toast.error("??? ?????? ???? ?????? � ???? ????? ??????");
+      if (msg.toLowerCase().includes("phone") || msg.includes("هاتف") || msg.includes("already")) {
+        toast.error("رقم الهاتف مسجل مسبقاً — جرّب تسجيل الدخول");
       } else if (err.response?.data?.errors) {
-        toast.error(err.response.data.errors[0]?.msg || "???? ?? ???????");
+        toast.error(err.response.data.errors[0]?.msg || "تحقق من بياناتك");
       } else {
-        toast.error(msg || "??? ????? ??????");
+        toast.error(msg || "فشل إنشاء الحساب");
       }
     } finally {
       setLoading(false);
@@ -83,17 +83,17 @@ export default function Register() {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <BrandLogo size="md" className="mx-auto mb-3 border-white/20 shadow-[0_10px_28px_rgba(0,0,0,0.28)]" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">????? ???? ????</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">إنشاء حساب جديد</h1>
         </div>
         <div className="card">
           {/* Role tabs */}
           <div className="flex rounded-xl bg-gray-100 dark:bg-gray-700 p-1 mb-6 gap-1">
             {[
-              { key: "customer", label: "????" },
-              { key: "driver",   label: "????" },
-              { key: "commercial", label: "?? ?????" }
+              { key: "customer", label: "عميل" },
+              { key: "driver",   label: "سائق" },
+              { key: "commercial", label: "🏪 تجاري" }
             ].map(t => (
-              <button key={t.key} onClick={() => setRole(t.key)}
+              <button key={t.key} type="button" onClick={() => setRole(t.key)}
                 className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${role === t.key ? "bg-white dark:bg-gray-600 shadow-sm text-primary-600" : "text-gray-500"}`}>
                 {t.label}
               </button>
@@ -102,60 +102,60 @@ export default function Register() {
 
           {role === "commercial" && (
             <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl text-sm text-amber-700 dark:text-amber-300">
-              ?? ?????? ??????? ???? ?? ??????? ???? ????? ??????? ???????? ??? ????? ????? ?? ???? ??????? ??? ?????? ??????.
+              🏪 الحساب التجاري يتيح لك استخدام موقع نشاطك التجاري تلقائياً عند الطلب ويظهر في دليل المحلات بعد موافقة المشرف.
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Common fields */}
-            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">????? ??????</label>
+            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الاسم الكامل</label>
               <div className="relative"><User size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input name="name" value={form.name} onChange={handleChange} className="input-field pr-10" placeholder="???? ????" required /></div></div>
-            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">??? ??????</label>
+                <input name="name" value={form.name} onChange={handleChange} className="input-field pr-10" placeholder="محمد أحمد" required /></div></div>
+            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رقم الهاتف</label>
               <div className="relative"><Phone size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input name="phone" value={form.phone} onChange={handleChange} className="input-field pr-10" placeholder="01XXXXXXXXX" required /></div></div>
-            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">???? ??????</label>
+            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
               <div className="relative"><Lock size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input name="password" type="password" value={form.password} onChange={handleChange} className="input-field pr-10" placeholder="��������" required minLength={6} /></div></div>
+                <input name="password" type="password" value={form.password} onChange={handleChange} className="input-field pr-10" placeholder="••••••••" required minLength={6} /></div></div>
 
             {role === "customer" && (
-              <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">???????</label>
+              <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">العنوان</label>
                 <div className="relative"><MapPin size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input name="address" value={form.address} onChange={handleChange} className="input-field pr-10" placeholder="????? ???????" /></div></div>
+                  <input name="address" value={form.address} onChange={handleChange} className="input-field pr-10" placeholder="طنطا، الغربية" /></div></div>
             )}
 
             {role === "driver" && (
               <>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">??? ???????</label>
+                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع المركبة</label>
                   <select name="vehicle_id" value={form.vehicle_id} onChange={handleChange} className="input-field" required>
-                    <option value="">???? ???????</option>
+                    <option value="">اختر المركبة</option>
                     {vehicles.map(v => <option key={v.id} value={v.id}>{v.icon} {v.name_ar}</option>)}
                   </select></div>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">??? ??????</label>
-                  <input name="vehicle_plate" value={form.vehicle_plate} onChange={handleChange} className="input-field" placeholder="? ? ? 1234" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">????? ??????</label>
+                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رقم اللوحة</label>
+                  <input name="vehicle_plate" value={form.vehicle_plate} onChange={handleChange} className="input-field" placeholder="م ن ا 1234" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الرقم القومي</label>
                   <input name="national_id" value={form.national_id} onChange={handleChange} className="input-field" placeholder="12345678901234" /></div>
               </>
             )}
 
             {role === "commercial" && (
               <>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">??? ?????? ??????? *</label>
+                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم النشاط التجاري *</label>
                   <div className="relative"><Store size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input name="business_name" value={form.business_name} onChange={handleChange} className="input-field pr-10" placeholder="????: ??? ??? ????" required /></div></div>
+                    <input name="business_name" value={form.business_name} onChange={handleChange} className="input-field pr-10" placeholder="مثال: محل أبو خالد" required /></div></div>
 
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">???? ?????? ??????? *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">موقع النشاط التجاري *</label>
                   <div className="relative">
                     <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input value={locSearch || (locations.find(l => String(l.id) === String(form.business_location_id))?.name_ar || "")}
                       onChange={e => { setLocSearch(e.target.value); setShowLocList(true); setForm(f => ({...f, business_location_id: ""})); }}
                       onFocus={() => setShowLocList(true)}
-                      className="input-field pr-10" placeholder="???? ?? ???????..." />
+                      className="input-field pr-10" placeholder="ابحث عن المنطقة..." />
                   </div>
                   {showLocList && (
                     <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                      {filteredLocs.length === 0 && <p className="p-3 text-sm text-gray-400">?? ???? ?????</p>}
+                      {filteredLocs.length === 0 && <p className="p-3 text-sm text-gray-400">لا توجد نتائج</p>}
                       {filteredLocs.map(l => (
                         <button key={l.id} type="button" className="w-full text-right px-4 py-2.5 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
                           onClick={() => { setForm(f => ({...f, business_location_id: l.id})); setLocSearch(""); setShowLocList(false); }}>
@@ -166,19 +166,19 @@ export default function Register() {
                   )}
                 </div>
 
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">??? ???? ?????? (???????)</label>
+                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رقم هاتف النشاط (اختياري)</label>
                   <input name="business_phone" value={form.business_phone} onChange={handleChange} className="input-field" placeholder="01XXXXXXXXX" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">??? ?????? (???????)</label>
-                  <textarea name="business_description" value={form.business_description} onChange={handleChange} className="input-field" rows={2} placeholder="??? ????? ?? ????? ???????..." /></div>
+                <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">وصف النشاط (اختياري)</label>
+                  <textarea name="business_description" value={form.business_description} onChange={handleChange} className="input-field" rows={2} placeholder="وصف مختصر عن نشاطك التجاري..." /></div>
               </>
             )}
 
             <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
-              {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "????? ??????"}
+              {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "إنشاء الحساب"}
             </button>
           </form>
           <div className="mt-4 text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">???? ???? ??????? <Link to="/login" className="text-primary-600 dark:text-primary-400 font-semibold hover:underline">????? ??????</Link></p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">لديك حساب بالفعل؟ <Link to="/login" className="text-primary-600 dark:text-primary-400 font-semibold hover:underline">تسجيل الدخول</Link></p>
           </div>
         </div>
       </div>

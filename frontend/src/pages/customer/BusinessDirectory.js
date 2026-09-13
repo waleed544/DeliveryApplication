@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { MapPin, Phone, Search, Store } from "lucide-react";
 
@@ -23,16 +23,16 @@ export default function BusinessDirectory() {
       <div className="card text-white border-0 bg-gradient-to-br from-amber-500 to-orange-500">
         <div className="flex items-center gap-3 mb-2">
           <Store size={28} className="text-white/90" />
-          <h1 className="text-xl font-bold">???? ??????? ????????</h1>
+          <h1 className="text-xl font-bold">دليل المحلات التجارية</h1>
         </div>
-        <p className="text-white/80 text-sm">????? ??????? ???????? ???????? ?? ??????</p>
+        <p className="text-white/80 text-sm">اكتشف المحلات والأنشطة التجارية في منطقتك</p>
       </div>
 
       {/* Search */}
       <div className="relative">
         <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input value={search} onChange={e => setSearch(e.target.value)}
-          className="input-field pr-10" placeholder="???? ?? ??? ?? ?????..." />
+          className="input-field pr-10" placeholder="ابحث عن محل أو منطقة..." />
       </div>
 
       {/* Content */}
@@ -41,7 +41,7 @@ export default function BusinessDirectory() {
       ) : filtered.length === 0 ? (
         <div className="card text-center py-12">
           <Store size={48} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">{search ? "?? ???? ?????" : "?? ???? ????? ????? ???"}</p>
+          <p className="text-gray-500">{search ? "لا توجد نتائج" : "لا يوجد محلات مسجلة بعد"}</p>
         </div>
       ) : (
         <div className="grid gap-4">
