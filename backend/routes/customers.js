@@ -24,12 +24,19 @@ router.get('/profile', async (req, res) => {
 // Update profile (customer-specific fields; name+phone are handled by /api/users/profile)
 router.put('/profile', async (req, res) => {
   try {
-    const { name, email, default_address, addresses } = req.body;
+    const { name, email, default_address, addresses, business_name, business_location_id, business_phone, business_description } = req.body;
     // Keep name + email in sync on users table too
     if (name) await db.query('UPDATE users SET name = $1, email = $2, updated_at = NOW() WHERE id = $3', [name, email || null, req.user.id]);
     await db.query(
-      'UPDATE customers SET default_address = $1, addresses = $2 WHERE user_id = $3',
-      [default_address || null, JSON.stringify(addresses || []), req.user.id]
+      `UPDATE customers 
+       SET default_address = $1, 
+           addresses = $2,
+           business_name = CASE WHEN account_type = 'commercial' THEN COALESCE($4, business_name) ELSE business_name END,
+           business_location_id = CASE WHEN account_type = 'commercial' THEN COALESCE($5, business_location_id) ELSE business_location_id END,
+           business_phone = CASE WHEN account_type = 'commercial' THEN COALESCE($6, business_phone) ELSE business_phone END,
+           business_description = CASE WHEN account_type = 'commercial' THEN COALESCE($7, business_description) ELSE business_description END
+       WHERE user_id = $3`,
+      [default_address || null, JSON.stringify(addresses || []), req.user.id, business_name || null, business_location_id || null, business_phone || null, business_description || null]
     );
     res.json({ message: 'تم تحديث الملف الشخصي' });
   } catch (error) {

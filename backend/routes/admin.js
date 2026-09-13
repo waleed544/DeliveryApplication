@@ -728,7 +728,7 @@ router.put('/commercial-accounts/:id/toggle-directory', async (req, res) => {
   }
 });
 
-// Delete commercial account
+// Deactivate commercial account (soft delete)
 router.delete('/commercial-accounts/:id', async (req, res) => {
   try {
     const custRow = await db.query('SELECT user_id FROM customers WHERE id = $1 AND account_type = $2', [req.params.id, 'commercial']);
@@ -737,6 +737,33 @@ router.delete('/commercial-accounts/:id', async (req, res) => {
     res.json({ message: 'تم تعطيل الحساب' });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Hard delete commercial account (permanently remove)
+router.delete('/commercial-accounts/:id/hard', async (req, res) => {
+  const client = await db.pool.connect();
+  try {
+    const custRow = await client.query('SELECT user_id FROM customers WHERE id = $1 AND account_type = $2', [req.params.id, 'commercial']);
+    if (custRow.rows.length === 0) {
+      client.release();
+      return res.status(404).json({ message: 'Account not found' });
+    }
+    const userId = custRow.rows[0].user_id;
+
+    await client.query('BEGIN');
+    // Delete customer profile
+    await client.query('DELETE FROM customers WHERE id = $1', [req.params.id]);
+    // Delete user completely
+    await client.query('DELETE FROM users WHERE id = $1', [userId]);
+    await client.query('COMMIT');
+    
+    res.json({ message: 'تم حذف الحساب نهائياً' });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    res.status(500).json({ message: error.message });
+  } finally {
+    client.release();
   }
 });
 

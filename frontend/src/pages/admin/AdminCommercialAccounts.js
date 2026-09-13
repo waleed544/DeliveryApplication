@@ -37,6 +37,15 @@ export default function AdminCommercialAccounts() {
       await api.delete(`/admin/commercial-accounts/${id}`);
       toast.success("تم التعطيل");
       fetch();
+    } catch { toast.error("فشل التعطيل"); }
+  };
+
+  const hardRemove = async (id) => {
+    if (!window.confirm("تأكيد: هل أنت متأكد من حذف هذا الحساب نهائياً من النظام؟ لا يمكن التراجع عن هذه الخطوة.")) return;
+    try {
+      await api.delete(`/admin/commercial-accounts/${id}/hard`);
+      toast.success("تم الحذف نهائياً");
+      fetch();
     } catch { toast.error("فشل الحذف"); }
   };
 
@@ -118,9 +127,14 @@ export default function AdminCommercialAccounts() {
                       <button onClick={() => toggleDir(a.id)} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${a.show_in_directory ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200" : "bg-blue-100 text-blue-700 hover:bg-blue-200"}`}>
                         {a.show_in_directory ? <><EyeOff size={13} /> إخفاء</> : <><Eye size={13} /> إظهار</>}
                       </button>
-                      <button onClick={() => remove(a.id)} className="flex items-center gap-1 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors">
-                        <Trash2 size={13} /> تعطيل
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={() => remove(a.id)} className="flex items-center gap-1 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors">
+                          <Trash2 size={13} /> تعطيل
+                        </button>
+                        <button onClick={() => hardRemove(a.id)} className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors">
+                          <Trash2 size={13} /> حذف نهائي
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>

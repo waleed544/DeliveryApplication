@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { User, Phone, Mail, MapPin, Save, Camera, Trash2, Lock } from 'lucide-react';
+import { User, Phone, Mail, MapPin, Save, Camera, Trash2, Lock, Store } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Use relative URL — React proxy forwards /uploads/* to backend automatically
@@ -19,6 +19,7 @@ export default function CustomerProfile() {
   const [saving, setSaving]       = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const [locations, setLocations] = useState([]);
   const [pwForm, setPwForm]       = useState({ next: '', confirm: '' });
   const [pwSaving, setPwSaving]   = useState(false);
 
@@ -26,14 +27,20 @@ export default function CustomerProfile() {
     Promise.all([
       api.get('/customers/profile'),
       api.get('/users/me'),
-    ]).then(([profileRes, userRes]) => {
+      api.get('/locations')
+    ]).then(([profileRes, userRes, locRes]) => {
       const p = profileRes.data;
       setProfile(p);
+      setLocations(locRes.data);
       setForm({
         name:            userRes.data.name    || '',
         phone:           userRes.data.phone   || '',
         email:           p.email              || '',
         default_address: p.default_address    || '',
+        business_name:   p.business_name      || '',
+        business_location_id: p.business_location_id || '',
+        business_phone:  p.business_phone     || '',
+        business_description: p.business_description || '',
       });
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -53,6 +60,10 @@ export default function CustomerProfile() {
         email:           form.email || null,
         default_address: form.default_address || null,
         addresses:       profile?.addresses || [],
+        business_name:   form.business_name || null,
+        business_location_id: form.business_location_id || null,
+        business_phone:  form.business_phone || null,
+        business_description: form.business_description || null,
       });
       const updatedUser = { ...user, name: userRes.data.user.name, phone: userRes.data.user.phone };
       localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -250,33 +261,51 @@ export default function CustomerProfile() {
           </div>
         </div>
 
-        {/* Commercial Info (Read-only for now) */}
+        {/* Commercial Info */}
         {profile?.account_type === 'commercial' && (
           <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-800">
             <h4 className="font-bold text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
-              <MapPin size={17} /> بيانات النشاط التجاري
+              <Store size={17} /> بيانات النشاط التجاري
             </h4>
-            <div className="space-y-3 bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-800/50">
+            <div className="space-y-4">
               <div>
-                <span className="block text-xs text-amber-600 dark:text-amber-500 mb-0.5">اسم النشاط</span>
-                <span className="font-medium text-gray-900 dark:text-white">{profile.business_name}</span>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم النشاط</label>
+                <input
+                  value={form.business_name}
+                  onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                  className="input-field"
+                />
               </div>
               <div>
-                <span className="block text-xs text-amber-600 dark:text-amber-500 mb-0.5">موقع النشاط</span>
-                <span className="font-medium text-gray-900 dark:text-white">{profile.business_location_name || '—'}</span>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">موقع النشاط</label>
+                <select
+                  value={form.business_location_id}
+                  onChange={(e) => setForm({ ...form, business_location_id: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">-- اختر المنطقة --</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name_ar}</option>
+                  ))}
+                </select>
               </div>
-              {profile.business_phone && (
-                <div>
-                  <span className="block text-xs text-amber-600 dark:text-amber-500 mb-0.5">هاتف النشاط</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{profile.business_phone}</span>
-                </div>
-              )}
-              {profile.business_description && (
-                <div>
-                  <span className="block text-xs text-amber-600 dark:text-amber-500 mb-0.5">الوصف</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{profile.business_description}</span>
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">هاتف النشاط (إن وجد)</label>
+                <input
+                  value={form.business_phone}
+                  onChange={(e) => setForm({ ...form, business_phone: e.target.value })}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الوصف</label>
+                <textarea
+                  value={form.business_description}
+                  onChange={(e) => setForm({ ...form, business_description: e.target.value })}
+                  className="input-field h-20 resize-none"
+                  placeholder="وصف مختصر للنشاط التجاري..."
+                />
+              </div>
             </div>
           </div>
         )}
