@@ -744,18 +744,37 @@ router.delete('/commercial-accounts/:id', async (req, res) => {
 router.delete('/commercial-accounts/:id/hard', async (req, res) => {
   const client = await db.pool.connect();
   try {
-    const custRow = await client.query('SELECT user_id FROM customers WHERE id = $1 AND account_type = $2', [req.params.id, 'commercial']);
+    const custRow = await client.query('SELECT id, user_id FROM customers WHERE id = $1 AND account_type = $2', [req.params.id, 'commercial']);
     if (custRow.rows.length === 0) {
       client.release();
       return res.status(404).json({ message: 'Account not found' });
     }
     const userId = custRow.rows[0].user_id;
+    const customerId = custRow.rows[0].id;
 
     await client.query('BEGIN');
-    // Delete customer profile
-    await client.query('DELETE FROM customers WHERE id = $1', [req.params.id]);
-    // Delete user completely
+    
+    // 1. Delete orders and related data
+    const ordersRes = await client.query('SELECT id FROM orders WHERE customer_id = $1', [customerId]);
+    if (ordersRes.rows.length > 0) {
+      const orderIds = ordersRes.rows.map(r => r.id);
+      await client.query('DELETE FROM order_locations WHERE order_id = ANY($1::uuid[])', [orderIds]);
+      await client.query('DELETE FROM order_items WHERE order_id = ANY($1::uuid[])', [orderIds]);
+      await client.query('DELETE FROM receipts WHERE order_id = ANY($1::uuid[])', [orderIds]);
+      await client.query('DELETE FROM orders WHERE customer_id = $1', [customerId]);
+    }
+
+    // 2. Delete chats/messages
+    await client.query('DELETE FROM messages WHERE sender_id = $1', [userId]);
+    await client.query('DELETE FROM chats WHERE participant_1_id = $1 OR participant_2_id = $1', [userId]);
+    
+    // 3. Delete activity logs
+    await client.query('DELETE FROM activity_logs WHERE user_id = $1', [userId]);
+
+    // 4. Finally delete customer and user
+    await client.query('DELETE FROM customers WHERE id = $1', [customerId]);
     await client.query('DELETE FROM users WHERE id = $1', [userId]);
+    
     await client.query('COMMIT');
     
     res.json({ message: 'تم حذف الحساب نهائياً' });
