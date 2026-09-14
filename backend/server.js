@@ -170,7 +170,7 @@ app.use('/api/place-options', require('./routes/placeOptions'));
 app.use('/api/banners', require('./routes/banners'));
 app.use('/api/delivery-prices', require('./routes/deliveryPrices'));
 app.use('/api/businesses', require('./routes/businesses'));
-
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Health check
 app.get('/api/health', (req, res) => {

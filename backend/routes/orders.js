@@ -3,6 +3,7 @@ const { authenticate } = require('../middleware/auth');
 const db = require('../config/db');
 const { calculateLocationBasedPricing, calculatePromoDiscount } = require('../utils/calculations');
 const socketManager = require('../socketManager');
+const { notifyDrivers } = require('../services/notificationService');
 const router = express.Router();
 
 router.use(authenticate);
@@ -172,9 +173,11 @@ router.post('/', async (req, res) => {
         [vehicle_id]
       );
       if (eligibleDrivers.rows.length > 0) {
-        socketManager.emitNewOrder(eligibleDrivers.rows.map(r => r.user_id), {
+        const driverUserIds = eligibleDrivers.rows.map(r => r.user_id);
+        socketManager.emitNewOrder(driverUserIds, {
           ...order, status: 'finding_driver'
         });
+        notifyDrivers(driverUserIds, 'طلب توصيل جديد', 'يوجد طلب توصيل جديد بالقرب منك، تفقده الآن!');
       }
 
       return res.status(201).json({ message: 'Order created', order });
@@ -265,9 +268,11 @@ router.post('/', async (req, res) => {
     );
 
     if (eligibleDrivers.rows.length > 0) {
-      socketManager.emitNewOrder(eligibleDrivers.rows.map(r => r.user_id), {
+      const driverUserIds = eligibleDrivers.rows.map(r => r.user_id);
+      socketManager.emitNewOrder(driverUserIds, {
         ...order, status: 'finding_driver', location_count: numLocations
       });
+      notifyDrivers(driverUserIds, 'طلب مشتريات جديد', 'يوجد طلب مشتريات جديد بالقرب منك، تفقده الآن!');
     }
 
     res.status(201).json({ message: 'Order created', order });

@@ -63,3 +63,7 @@ tmp/
 temp/
 coverage/
 .cache/
+
+# Firebase Credentials
+backend/firebase-service-account.json
+mobile/android/app/google-services.json

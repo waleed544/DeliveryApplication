@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
+import { useAppPermissions } from './hooks/useAppPermissions';
 
 // Layouts
 import CustomerLayout from './components/customer/CustomerLayout';
@@ -46,6 +47,7 @@ import AdminCommercialAccounts from './pages/admin/AdminCommercialAccounts';
 function App() {
   const { user, loading } = useAuth();
   const { isDark } = useTheme();
+  useAppPermissions(user);
 
   if (loading) {
     return (

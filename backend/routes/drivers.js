@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const db = require('../config/db');
 const socketManager = require('../socketManager');
+const { notifyUser } = require('../services/notificationService');
 const router = express.Router();
 
 router.use(authenticate);
@@ -386,6 +387,18 @@ router.put('/order-status/:orderId', async (req, res) => {
         participants.driver_user_id,
         { orderId: req.params.orderId, status }
       );
+      
+      const statusMap = {
+        driver_accepted: 'جاري التوجه إليك',
+        driver_at_pickup: 'السائق في موقع الاستلام',
+        items_picked_up: 'تم استلام الطلب',
+        driver_on_way: 'السائق في الطريق إليك',
+        completed: 'تم التسليم بنجاح',
+        cancelled: 'تم إلغاء الطلب'
+      };
+      const readableStatus = statusMap[status] || status;
+      notifyUser(currentOrder.customer_user_id, 'تحديث حالة الطلب', `تم تغيير حالة طلبك إلى: ${readableStatus}`);
+
     }
 
     res.json({ message: 'Status updated' });
