@@ -4,9 +4,9 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteStatus } from '../../context/SiteStatusContext';
 import {
-  ChevronLeft, ChevronRight, MapPin, Package, ShoppingCart, Tag,
+  ChevronLeft, ChevronRight, MapPin, Package, Tag,
   CheckCircle, Plus, Trash2, Navigation, Home, Info, Store, AlertTriangle,
-  Truck, User, Box, ArrowLeftRight
+  Truck, Box, ArrowLeftRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -327,7 +327,6 @@ export default function CreateOrder() {
     ? deliverySteps.filter(s => s.num >= 12)
     : (mode === 'delivery' ? deliverySteps : shoppingSteps);
   const locationPrice = (id) => { const l = locations.find(x => x.id === id); return l ? parseFloat(l.delivery_price) || 0 : 0; };
-  const selectedPlacesOption = placeOptions.find(o => o.id === form._selected_option_id);
   const pickupArea  = locations.find(l => l.id === delivery.pickup_location_id);
   const dropoffArea = locations.find(l => l.id === delivery.dropoff_location_id);
 
