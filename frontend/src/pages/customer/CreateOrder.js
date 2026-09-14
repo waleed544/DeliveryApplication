@@ -757,7 +757,7 @@ export default function CreateOrder() {
               </button>
             ) : (
               <button onClick={handleSubmit}
-                disabled={loading || (mode === 'shopping' && !pricing) || (mode === 'delivery' && !pricing)}
+                disabled={loading || (mode === 'delivery' && !pricing)}
                 className="btn-primary flex items-center gap-2 disabled:opacity-60">
                 {loading
                   ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
