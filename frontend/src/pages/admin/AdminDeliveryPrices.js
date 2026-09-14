@@ -8,7 +8,8 @@ export default function AdminDeliveryPrices() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
-  const [form, setForm] = useState({ from_location_id: '', to_location_id: '', price: '' });
+  const [search, setSearch]       = useState('');
+  const [form, setForm] = useState({ from_location_id: '', to_location_id: '', price: '', sort_order: '' });
 
   const fetchAll = () => {
     Promise.all([
@@ -35,10 +36,10 @@ export default function AdminDeliveryPrices() {
       setPrices(prev => {
         // upsert
         const exists = prev.find(p => p.id === res.data.id);
-        if (exists) return prev.map(p => p.id === res.data.id ? { ...p, ...res.data } : p);
-        return [res.data, ...prev];
+        if (exists) return prev.map(p => p.id === res.data.id ? { ...p, ...res.data } : p).sort((a, b) => a.sort_order - b.sort_order);
+        return [res.data, ...prev].sort((a, b) => a.sort_order - b.sort_order);
       });
-      setForm({ from_location_id: '', to_location_id: '', price: '' });
+      setForm({ from_location_id: '', to_location_id: '', price: '', sort_order: '' });
       toast.success('تم إضافة/تحديث المسار');
       fetchAll();
     } catch (err) {
@@ -63,7 +64,8 @@ export default function AdminDeliveryPrices() {
     setForm({
       from_location_id: p.from_location_id,
       to_location_id: p.to_location_id,
-      price: p.price
+      price: p.price,
+      sort_order: p.sort_order
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -73,6 +75,16 @@ export default function AdminDeliveryPrices() {
       await api.put(`/delivery-prices/${id}`, { price: parseFloat(newPrice) });
       setPrices(prev => prev.map(p => p.id === id ? { ...p, price: newPrice } : p));
       toast.success('تم تحديث السعر');
+    } catch {
+      toast.error('فشل التحديث');
+    }
+  };
+
+  const handleOrderChange = async (id, newOrder) => {
+    try {
+      await api.put(`/delivery-prices/${id}`, { sort_order: parseInt(newOrder, 10) });
+      fetchAll(); // Fetch all to get the correct new order and shifts
+      toast.success('تم تحديث الترتيب');
     } catch {
       toast.error('فشل التحديث');
     }
@@ -95,6 +107,13 @@ export default function AdminDeliveryPrices() {
 
   const activeLocations = locations.filter(l => l.is_active !== false);
 
+  const filteredPrices = prices.filter(p => 
+    p.from_name_ar.toLowerCase().includes(search.toLowerCase()) || 
+    p.to_name_ar.toLowerCase().includes(search.toLowerCase()) ||
+    (p.from_name_en && p.from_name_en.toLowerCase().includes(search.toLowerCase())) ||
+    (p.to_name_en && p.to_name_en.toLowerCase().includes(search.toLowerCase()))
+  );
+
   return (
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center gap-3">
@@ -103,6 +122,17 @@ export default function AdminDeliveryPrices() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">أسعار التوصيل بين المناطق</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">حدد سعر التوصيل لكل مسار (من منطقة → إلى منطقة)</p>
         </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="input-field pr-10"
+          placeholder="ابحث عن مسار (مثال: طنطا)..."
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
       </div>
 
       {/* ── Add form ─────────────────────────────────────────────────────── */}
@@ -143,6 +173,17 @@ export default function AdminDeliveryPrices() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الترتيب</label>
+            <input
+              type="number"
+              value={form.sort_order}
+              onChange={e => setForm({ ...form, sort_order: e.target.value })}
+              className="input-field"
+              placeholder="تلقائي (الأخير)"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">السعر (ج.م)</label>
             <div className="flex gap-2">
               <input
@@ -168,7 +209,7 @@ export default function AdminDeliveryPrices() {
       </form>
 
       {/* ── Prices table ─────────────────────────────────────────────────── */}
-      {prices.length === 0 ? (
+      {filteredPrices.length === 0 ? (
         <div className="card text-center py-10">
           <Route size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500">لا توجد مسارات بعد — أضف أول مسار من النموذج أعلاه</p>
@@ -178,6 +219,7 @@ export default function AdminDeliveryPrices() {
           <table className="w-full text-sm" style={{ minWidth: '580px' }}>
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-300 w-16">الترتيب</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">من</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">إلى</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">السعر (ج.م)</th>
@@ -186,8 +228,11 @@ export default function AdminDeliveryPrices() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-              {prices.map(p => (
+              {filteredPrices.map(p => (
                 <tr key={p.id} className={`transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/30 ${!p.is_active ? 'opacity-50' : ''}`}>
+                  <td className="px-4 py-3 text-center">
+                    <OrderCell order={p.sort_order} onSave={(v) => handleOrderChange(p.id, v)} />
+                  </td>
                   <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                     📍 {p.from_name_ar}
                   </td>
@@ -259,6 +304,41 @@ function PriceCell({ price, onSave }) {
       title="انقر لتعديل السعر"
     >
       <span>{parseFloat(price).toFixed(2)} ج.م</span>
+      <Edit2 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+    </button>
+  );
+}
+
+// Inline-editable order cell
+function OrderCell({ order, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(order || 0);
+
+  const commit = () => {
+    setEditing(false);
+    if (parseInt(val, 10) !== parseInt(order, 10)) onSave(val);
+  };
+
+  if (editing) {
+    return (
+      <input
+        type="number"
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false); }}
+        className="input-field py-1 w-16 text-center text-sm mx-auto"
+        autoFocus
+      />
+    );
+  }
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="flex items-center justify-center gap-1 font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors group w-full"
+      title="انقر لتعديل الترتيب"
+    >
+      <span>#{order || 0}</span>
       <Edit2 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
     </button>
   );

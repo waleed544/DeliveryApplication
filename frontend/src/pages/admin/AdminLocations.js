@@ -172,6 +172,7 @@ export default function AdminLocations() {
           <table className="w-full text-sm" style={{ minWidth: '520px' }}>
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
+                <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 w-16">الترتيب</th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">المنطقة</th>
                 <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 w-36">سعر التوصيل</th>
                 <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 w-24">الحالة</th>
@@ -184,6 +185,20 @@ export default function AdminLocations() {
               )}
               {filteredLocations.map(loc => (
                 <tr key={loc.id} className={`transition-colors ${!loc.is_active ? 'opacity-50' : ''} hover:bg-gray-50 dark:hover:bg-gray-800/40`}>
+
+                  {/* Order cell */}
+                  <td className="px-4 py-3 text-center">
+                    {editingId === loc.id ? (
+                      <input
+                        type="number"
+                        value={editValues.sort_order}
+                        onChange={e => setEditValues({ ...editValues, sort_order: parseInt(e.target.value) || 0 })}
+                        className="input-field py-1 text-sm text-center w-16 mx-auto"
+                      />
+                    ) : (
+                      <span className="font-bold text-gray-500">#{loc.sort_order}</span>
+                    )}
+                  </td>
 
                   {/* Name cell */}
                   <td className="px-4 py-3">

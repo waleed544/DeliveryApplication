@@ -3,6 +3,21 @@ const { authenticate, authorize } = require('../middleware/auth');
 const db = require('../config/db');
 const router = express.Router();
 
+async function reindexDeliveryPrices(newItemId = null, newOrder = null) {
+  const res = await db.query('SELECT id FROM delivery_route_prices ORDER BY sort_order ASC, created_at ASC');
+  let items = res.rows.map(r => r.id);
+
+  if (newItemId && newOrder !== null) {
+    items = items.filter(id => id !== newItemId);
+    const targetIndex = Math.max(0, Math.min(items.length, newOrder - 1));
+    items.splice(targetIndex, 0, newItemId);
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    await db.query('UPDATE delivery_route_prices SET sort_order = $1 WHERE id = $2', [i + 1, items[i]]);
+  }
+}
+
 router.use(authenticate);
 
 // GET /delivery-prices — all active prices (for customers & order form)
@@ -16,7 +31,7 @@ router.get('/', async (req, res) => {
        JOIN locations fl ON drp.from_location_id = fl.id
        JOIN locations tl ON drp.to_location_id   = tl.id
        WHERE drp.is_active = true
-       ORDER BY fl.name_ar, tl.name_ar`
+       ORDER BY drp.sort_order ASC`
     );
     res.json(result.rows);
   } catch (err) {
@@ -57,7 +72,7 @@ router.get('/admin', authorize('admin'), async (req, res) => {
        FROM delivery_route_prices drp
        JOIN locations fl ON drp.from_location_id = fl.id
        JOIN locations tl ON drp.to_location_id   = tl.id
-       ORDER BY fl.name_ar, tl.name_ar`
+       ORDER BY drp.sort_order ASC`
     );
     res.json(result.rows);
   } catch (err) {
@@ -67,20 +82,29 @@ router.get('/admin', authorize('admin'), async (req, res) => {
 
 // POST /delivery-prices — create
 router.post('/', authorize('admin'), async (req, res) => {
-  const { from_location_id, to_location_id, price } = req.body;
+  const { from_location_id, to_location_id, price, sort_order } = req.body;
   if (!from_location_id || !to_location_id || price == null) {
     return res.status(400).json({ message: 'from_location_id, to_location_id, and price are required' });
   }
   try {
     const result = await db.query(
-      `INSERT INTO delivery_route_prices (from_location_id, to_location_id, price)
-       VALUES ($1, $2, $3)
+      `INSERT INTO delivery_route_prices (from_location_id, to_location_id, price, sort_order)
+       VALUES ($1, $2, $3, 999999)
        ON CONFLICT (from_location_id, to_location_id) 
        DO UPDATE SET price = EXCLUDED.price, is_active = true, updated_at = NOW()
        RETURNING *`,
       [from_location_id, to_location_id, parseFloat(price)]
     );
-    res.status(201).json(result.rows[0]);
+    const newItem = result.rows[0];
+
+    if (sort_order !== undefined && sort_order !== null) {
+      await reindexDeliveryPrices(newItem.id, parseInt(sort_order, 10));
+    } else {
+      await reindexDeliveryPrices();
+    }
+
+    const finalRes = await db.query('SELECT * FROM delivery_route_prices WHERE id = $1', [newItem.id]);
+    res.status(201).json(finalRes.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ message: 'هذا المسار موجود بالفعل' });
     res.status(500).json({ message: err.message });
@@ -89,7 +113,7 @@ router.post('/', authorize('admin'), async (req, res) => {
 
 // PUT /delivery-prices/:id — update price or active status
 router.put('/:id', authorize('admin'), async (req, res) => {
-  const { price, is_active } = req.body;
+  const { price, is_active, sort_order } = req.body;
   try {
     const result = await db.query(
       `UPDATE delivery_route_prices
@@ -100,7 +124,15 @@ router.put('/:id', authorize('admin'), async (req, res) => {
       [price != null ? parseFloat(price) : null, is_active, req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ message: 'Not found' });
-    res.json(result.rows[0]);
+    
+    if (sort_order !== undefined && sort_order !== null) {
+      await reindexDeliveryPrices(req.params.id, parseInt(sort_order, 10));
+    } else {
+      await reindexDeliveryPrices();
+    }
+
+    const finalRes = await db.query('SELECT * FROM delivery_route_prices WHERE id = $1', [req.params.id]);
+    res.json(finalRes.rows[0]);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -114,6 +146,7 @@ router.delete('/:id', authorize('admin'), async (req, res) => {
       [req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ message: 'Not found' });
+    await reindexDeliveryPrices();
     res.json({ message: 'تم الحذف' });
   } catch (err) {
     res.status(500).json({ message: err.message });
