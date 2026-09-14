@@ -166,7 +166,7 @@ router.post('/', async (req, res) => {
 
       // Notify eligible drivers
       const eligibleDrivers = await db.query(
-        `SELECT u.id as user_id FROM drivers d JOIN users u ON d.user_id = u.id
+        `SELECT u.id as user_id, d.id as driver_id FROM drivers d JOIN users u ON d.user_id = u.id
          WHERE d.vehicle_id = $1 AND d.availability_status = 'available'
            AND d.is_approved = true AND d.is_active = true
            AND COALESCE(d.prepaid_balance, 0) > 0`,
@@ -174,10 +174,11 @@ router.post('/', async (req, res) => {
       );
       if (eligibleDrivers.rows.length > 0) {
         const driverUserIds = eligibleDrivers.rows.map(r => r.user_id);
+        const driverIds = eligibleDrivers.rows.map(r => r.driver_id);
         socketManager.emitNewOrder(driverUserIds, {
           ...order, status: 'finding_driver'
         });
-        notifyDrivers(driverUserIds, 'طلب توصيل جديد', 'يوجد طلب توصيل جديد بالقرب منك، تفقده الآن!');
+        notifyDrivers(driverIds, 'طلب توصيل جديد', 'يوجد طلب توصيل جديد بالقرب منك، تفقده الآن!');
       }
 
       return res.status(201).json({ message: 'Order created', order });
@@ -260,7 +261,7 @@ router.post('/', async (req, res) => {
     client = null;
 
     const eligibleDrivers = await db.query(
-      `SELECT u.id as user_id FROM drivers d JOIN users u ON d.user_id = u.id
+      `SELECT u.id as user_id, d.id as driver_id FROM drivers d JOIN users u ON d.user_id = u.id
        WHERE d.vehicle_id = $1 AND d.availability_status = 'available'
          AND d.is_approved = true AND d.is_active = true
          AND COALESCE(d.prepaid_balance, 0) > 0`,
@@ -269,10 +270,11 @@ router.post('/', async (req, res) => {
 
     if (eligibleDrivers.rows.length > 0) {
       const driverUserIds = eligibleDrivers.rows.map(r => r.user_id);
+      const driverIds = eligibleDrivers.rows.map(r => r.driver_id);
       socketManager.emitNewOrder(driverUserIds, {
         ...order, status: 'finding_driver', location_count: numLocations
       });
-      notifyDrivers(driverUserIds, 'طلب مشتريات جديد', 'يوجد طلب مشتريات جديد بالقرب منك، تفقده الآن!');
+      notifyDrivers(driverIds, 'طلب مشتريات جديد', 'يوجد طلب مشتريات جديد بالقرب منك، تفقده الآن!');
     }
 
     res.status(201).json({ message: 'Order created', order });

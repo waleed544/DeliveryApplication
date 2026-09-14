@@ -24,8 +24,19 @@ router.post('/register-token', authenticate, async (req, res) => {
     
     const type = req.body.type || (req.user.role === 'driver' ? 'driver' : 'customer');
     
-    const finalUserId = type === 'customer' ? req.user.id : null;
-    const finalDriverId = type === 'driver' ? req.user.id : null;
+    let finalUserId = null;
+    let finalDriverId = null;
+
+    if (type === 'customer') {
+      finalUserId = req.user.id;
+    } else if (type === 'driver') {
+      const driverResult = await pool.query('SELECT id FROM drivers WHERE user_id = $1', [req.user.id]);
+      if (driverResult.rows.length > 0) {
+        finalDriverId = driverResult.rows[0].id;
+      } else {
+        return res.status(404).json({ message: 'Driver profile not found' });
+      }
+    }
 
     if (!finalUserId && !finalDriverId) {
        return res.status(400).json({ message: 'Invalid user type' });
