@@ -140,20 +140,7 @@ export default function CreateOrder() {
     setForm({ ...form, num_places: count, places_fee: fee, place_details: details, _selected_option_id: option.id });
   };
 
-  // ── Pricing preview (shopping only) ──────────────────────────────────────
-  const previewPricing = async () => {
-    const locationIds = form.locations.map(l => l.location_id).filter(Boolean);
-    if (!locationIds.length) { toast.error('اختر منطقة تسعير واحدة على الأقل'); return; }
-    const itemsSubtotal = form.items.reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1), 0);
-    try {
-      const res = await api.post('/orders/preview', {
-        location_ids: locationIds, service_type: form.service_type,
-        items_subtotal: itemsSubtotal, promo_code: form.promo_code,
-        places_fee: form.places_fee, vehicle_id: form.vehicle_id
-      });
-      setPricing(res.data);
-    } catch { toast.error('فشل حساب السعر'); }
-  };
+
 
   // ── Step progression ──────────────────────────────────────────────────────
   // SHOPPING steps: 1(vehicle) → 2(service-select) → 3(locations) → 4(places) → 5(type) → 6(notes) → 7(review)
@@ -564,15 +551,7 @@ export default function CreateOrder() {
                 </div>
               )}
 
-              {/* Promo coupon */}
-              <div className="pt-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كود الخصم (اختياري)</label>
-                <div className="flex gap-2">
-                  <input value={form.promo_code} onChange={e => setForm({ ...form, promo_code: e.target.value })}
-                    className="input-field flex-1" placeholder="أدخل الكود" />
-                  <button onClick={previewPricing} className="btn-secondary whitespace-nowrap">تطبيق</button>
-                </div>
-              </div>
+
             </div>
           )}
 
@@ -760,14 +739,7 @@ export default function CreateOrder() {
                   className="input-field mb-3" rows={2} placeholder="ادخل سعر الاوردر او اي تفاصيل.." />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كود خصم (إن وجد)</label>
-                <div className="relative">
-                  <input value={delivery.promo_code} onChange={e => setDelivery({ ...delivery, promo_code: e.target.value })}
-                    className="input-field pr-10 uppercase" placeholder="أدخل كود الخصم" />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🎟</span>
-                </div>
-              </div>
+
             </div>
           )}
 
