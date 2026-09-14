@@ -13,6 +13,7 @@ export const useAppPermissions = (user) => {
     if (Capacitor.isNativePlatform()) {
       requestAllPermissions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const requestAllPermissions = async () => {
