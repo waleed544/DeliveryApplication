@@ -9,6 +9,10 @@ export default function AdminDeliveryPrices() {
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [search, setSearch]       = useState('');
+  const [fromSearch, setFromSearch] = useState('');
+  const [toSearch, setToSearch] = useState('');
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
   const [form, setForm] = useState({ from_location_id: '', to_location_id: '', price: '', sort_order: '' });
 
   const fetchAll = () => {
@@ -40,6 +44,8 @@ export default function AdminDeliveryPrices() {
         return [res.data, ...prev].sort((a, b) => a.sort_order - b.sort_order);
       });
       setForm({ from_location_id: '', to_location_id: '', price: '', sort_order: '' });
+      setFromSearch('');
+      setToSearch('');
       toast.success('تم إضافة/تحديث المسار');
       fetchAll();
     } catch (err) {
@@ -67,6 +73,8 @@ export default function AdminDeliveryPrices() {
       price: p.price,
       sort_order: p.sort_order
     });
+    setFromSearch(p.from_name_ar);
+    setToSearch(p.to_name_ar);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -131,7 +139,7 @@ export default function AdminDeliveryPrices() {
           onChange={e => setSearch(e.target.value)}
           className="input-field pr-10"
           placeholder="ابحث عن مسار (مثال: طنطا)..."
-          autoComplete="off"
+          autoComplete="new-password"
           autoCorrect="off"
           spellCheck="false"
         />
@@ -146,16 +154,34 @@ export default function AdminDeliveryPrices() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">من (نقطة الاستلام)</label>
-            <select
-              value={form.from_location_id}
-              onChange={e => setForm({ ...form, from_location_id: e.target.value })}
-              className="input-field"
-            >
-              <option value="">اختر المنطقة</option>
-              {activeLocations.map(l => (
-                <option key={l.id} value={l.id}>{l.name_ar}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                value={fromSearch}
+                onChange={e => { setFromSearch(e.target.value); setForm({ ...form, from_location_id: '' }); setFromOpen(true); }}
+                onFocus={() => setFromOpen(true)}
+                onBlur={() => setTimeout(() => setFromOpen(false), 150)}
+                className="input-field"
+                placeholder="ابحث واختر..."
+                autoComplete="new-password"
+                autoCorrect="off"
+                spellCheck="false"
+              />
+              {fromOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                  {activeLocations.filter(l => !fromSearch || l.name_ar.toLowerCase().includes(fromSearch.toLowerCase())).length === 0 ? (
+                    <p className="text-center text-sm text-gray-400 py-3">لم يتم العثور</p>
+                  ) : activeLocations.filter(l => !fromSearch || l.name_ar.toLowerCase().includes(fromSearch.toLowerCase())).map(l => (
+                    <button key={l.id} type="button"
+                      onMouseDown={() => { setForm({ ...form, from_location_id: l.id }); setFromSearch(l.name_ar); setFromOpen(false); }}
+                      className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                    >
+                      {l.name_ar}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -163,16 +189,34 @@ export default function AdminDeliveryPrices() {
               <ArrowLeftRight size={14} className="inline ml-1" />
               إلى (نقطة التسليم)
             </label>
-            <select
-              value={form.to_location_id}
-              onChange={e => setForm({ ...form, to_location_id: e.target.value })}
-              className="input-field"
-            >
-              <option value="">اختر المنطقة</option>
-              {activeLocations.map(l => (
-                <option key={l.id} value={l.id}>{l.name_ar}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                value={toSearch}
+                onChange={e => { setToSearch(e.target.value); setForm({ ...form, to_location_id: '' }); setToOpen(true); }}
+                onFocus={() => setToOpen(true)}
+                onBlur={() => setTimeout(() => setToOpen(false), 150)}
+                className="input-field"
+                placeholder="ابحث واختر..."
+                autoComplete="new-password"
+                autoCorrect="off"
+                spellCheck="false"
+              />
+              {toOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                  {activeLocations.filter(l => !toSearch || l.name_ar.toLowerCase().includes(toSearch.toLowerCase())).length === 0 ? (
+                    <p className="text-center text-sm text-gray-400 py-3">لم يتم العثور</p>
+                  ) : activeLocations.filter(l => !toSearch || l.name_ar.toLowerCase().includes(toSearch.toLowerCase())).map(l => (
+                    <button key={l.id} type="button"
+                      onMouseDown={() => { setForm({ ...form, to_location_id: l.id }); setToSearch(l.name_ar); setToOpen(false); }}
+                      className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                    >
+                      {l.name_ar}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>

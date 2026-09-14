@@ -111,7 +111,7 @@ export default function AdminLocations() {
           onChange={e => setSearch(e.target.value)}
           className="input-field pr-10"
           placeholder="ابحث عن منطقة..."
-          autoComplete="off"
+          autoComplete="new-password"
           autoCorrect="off"
           spellCheck="false"
         />
