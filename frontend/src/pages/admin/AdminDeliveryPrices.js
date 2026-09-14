@@ -131,6 +131,9 @@ export default function AdminDeliveryPrices() {
           onChange={e => setSearch(e.target.value)}
           className="input-field pr-10"
           placeholder="ابحث عن مسار (مثال: طنطا)..."
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
       </div>
