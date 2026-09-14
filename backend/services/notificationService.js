@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { getMessaging } = require('firebase-admin/messaging');
 const path = require('path');
 const { pool } = require('../config/db');
 
@@ -11,11 +12,11 @@ try {
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     // Use environment variable in production (Railway)
     const serviceAccountJson = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    credential = admin.credential.cert(serviceAccountJson);
+    credential = admin.cert(serviceAccountJson);
   } else {
     // Fallback to local file for development
     const serviceAccountPath = path.join(__dirname, '../firebase-service-account.json');
-    credential = admin.credential.cert(serviceAccountPath);
+    credential = admin.cert(serviceAccountPath);
   }
 
   admin.initializeApp({
@@ -55,7 +56,7 @@ async function sendPushNotification(tokens, payload) {
   };
 
   try {
-    const response = await admin.messaging().sendEachForMulticast(message);
+    const response = await getMessaging().sendEachForMulticast(message);
     
     // Check for failed tokens (expired, unregistered, etc.) and remove them from the database
     const failedTokens = [];
