@@ -159,7 +159,7 @@ export default function AdminPricing() {
         ))}
       </div>
 
-      <section className="card space-y-4">
+      {/* <section className="card space-y-4">
         <div className="flex items-center gap-2">
           <Store size={20} className="text-accent" />
           <div>
@@ -197,7 +197,7 @@ export default function AdminPricing() {
             </div>
           ))}
         </div>
-      </section>
+      </section> */}
     </div>
   );
 }
