@@ -230,6 +230,7 @@ router.post('/accept-order/:orderId', async (req, res) => {
         orderId,
         status: 'driver_accepted'
       });
+      notifyUser(participants.customer_user_id, 'تم قبول طلبك', 'قام السائق بقبول طلبك وهو في الطريق إليك!');
     }
 
     res.json({ message: 'Order accepted' });
@@ -677,6 +678,7 @@ router.post('/cancel-order/:orderId', async (req, res) => {
       socketManager.emitOrderUpdate(participants.customer_user_id, null, {
         orderId: req.params.orderId, status: 'cancelled'
       });
+      notifyUser(participants.customer_user_id, 'إلغاء الطلب', 'نعتذر، لقد قام السائق بإلغاء الطلب.');
     }
 
     res.json({ message: 'Order cancelled' });
