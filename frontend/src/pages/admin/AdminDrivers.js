@@ -154,10 +154,10 @@ export default function AdminDrivers() {
                         <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">معطل</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
-                      <span className="flex items-center gap-1"><Phone size={12} /> {driver.phone}</span>
-                      <span className="flex items-center gap-1"><Truck size={12} /> {driver.vehicle_name_ar}</span>
-                      <span className="flex items-center gap-1"><Star size={12} className="text-yellow-400 fill-yellow-400" /> {driver.rating_avg}</span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 mt-1">
+                      <span className="flex items-center gap-1 whitespace-nowrap"><Phone size={12} /> {driver.phone}</span>
+                      <span className="flex items-center gap-1 whitespace-nowrap"><Truck size={12} /> {driver.vehicle_name_ar}</span>
+                      <span className="flex items-center gap-1 whitespace-nowrap"><Star size={12} className="text-yellow-400 fill-yellow-400" /> {driver.rating_avg}</span>
                     </div>
                   </div>
                 </div>
@@ -184,7 +184,7 @@ export default function AdminDrivers() {
                   {depleted && !negative && <span className="text-xs text-red-500 font-semibold mt-0.5">نفد ⚠</span>}
                 </div>
 
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
                   <div className="text-center px-3">
                     <p className="font-bold text-green-600">{driver.completed_orders || 0}</p>
                     <p className="text-xs text-gray-500">مكتمل</p>
@@ -336,17 +336,21 @@ export default function AdminDrivers() {
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">مواعيد عمل: {selectedDriver.name}</h3>
             <div className="space-y-3">
               {days.map((day, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                  <input
-                    type="checkbox"
-                    checked={selectedDriver.shifts[idx]?.is_active !== false}
-                    onChange={e => updateShift(idx, 'is_active', e.target.checked)}
-                    className="w-5 h-5 rounded"
-                  />
-                  <span className="w-20 text-sm font-medium">{day}</span>
-                  <input type="time" value={selectedDriver.shifts[idx]?.start_time || '09:00'} onChange={e => updateShift(idx, 'start_time', e.target.value)} className="input-field text-sm w-28" />
-                  <span className="text-gray-400">-</span>
-                  <input type="time" value={selectedDriver.shifts[idx]?.end_time || '17:00'} onChange={e => updateShift(idx, 'end_time', e.target.value)} className="input-field text-sm w-28" />
+                <div key={idx} className="flex flex-wrap items-center gap-2 sm:gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                  <div className="flex items-center gap-2 min-w-[100px]">
+                    <input
+                      type="checkbox"
+                      checked={selectedDriver.shifts[idx]?.is_active !== false}
+                      onChange={e => updateShift(idx, 'is_active', e.target.checked)}
+                      className="w-5 h-5 rounded"
+                    />
+                    <span className="text-sm font-medium">{day}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                    <input type="time" value={selectedDriver.shifts[idx]?.start_time || '09:00'} onChange={e => updateShift(idx, 'start_time', e.target.value)} className="input-field text-sm flex-1 text-center px-1" />
+                    <span className="text-gray-400">-</span>
+                    <input type="time" value={selectedDriver.shifts[idx]?.end_time || '17:00'} onChange={e => updateShift(idx, 'end_time', e.target.value)} className="input-field text-sm flex-1 text-center px-1" />
+                  </div>
                 </div>
               ))}
             </div>

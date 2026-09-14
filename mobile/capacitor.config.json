@@ -1,0 +1,5 @@
+{
+  "appId": "com.delivery.app",
+  "appName": "bclick",
+  "webDir": "../frontend/build"
+}

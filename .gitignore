@@ -10,6 +10,11 @@ node_modules/
 # Frontend build output
 frontend/build/
 
+# Mobile app build output
+mobile/build/
+mobile/www/
+mobile/.capacitor/
+
 # Runtime uploads and generated user files
 backend/uploads/*
 !backend/uploads/avatars/
