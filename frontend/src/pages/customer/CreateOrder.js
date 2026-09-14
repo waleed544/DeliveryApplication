@@ -84,11 +84,11 @@ export default function CreateOrder() {
             ...d,
             sub_type: 'package',
             pickup_location_id: businessProfile.business_location_id,
-            pickup_address: businessProfile.business_location_name || businessProfile.business_name || ''
+            pickup_address: ''
           }));
           const moto = r.data.find(v => v.type === 'motorcycle') || r.data[0];
           if (moto) setForm(f => ({ ...f, vehicle_id: moto.id }));
-          setStep(12);
+          setStep(11);
         }
       }
     }).catch(() => {});
@@ -160,16 +160,13 @@ export default function CreateOrder() {
   // DELIVERY steps: 1(vehicle) → 2(service-select) → D1(subtype) → D2(pickup) → D3(dropoff) → D4(review)
   // We encode delivery steps as 10+n so they don't conflict with shopping steps
 
-  const SHOPPING_TOTAL = 5;
-  const DELIVERY_STEPS = [10, 11, 12, 13]; // D1..D4
+  const SHOPPING_TOTAL = 4;
+  const DELIVERY_STEPS = [10, 11]; // D1, D2
 
   const isDeliveryStep = step >= 10;
-  const isLastStep = mode === 'shopping' ? step === SHOPPING_TOTAL : step === 13;
+  const isLastStep = mode === 'shopping' ? step === SHOPPING_TOTAL : step === 11;
 
-  // Trigger shopping preview on step 5
-  useEffect(() => {
-    if (step === 5 && mode === 'shopping' && form.vehicle_id) previewPricing();
-  }, [step]); // eslint-disable-line
+  // Trigger shopping preview is no longer needed since review step is skipped
 
   const canAdvance = () => {
     if (step === 1) return !!form.vehicle_id;
@@ -177,7 +174,7 @@ export default function CreateOrder() {
 
     // ── Shopping ──
     if (step === 3) {
-      return form.locations.some(l => l.location_id) && form.locations.every(l => l.custom_address.trim() !== '');
+      return form.locations.some(l => l.location_id);
     }
     if (step === 4) {
       return form.num_places !== null;
@@ -186,9 +183,8 @@ export default function CreateOrder() {
 
     // ── Delivery ──
     if (step === 10) return delivery.sub_type !== null;
-    if (step === 11) return !!delivery.pickup_location_id && delivery.pickup_address.trim() !== '';
-    if (step === 12) {
-      if (!delivery.dropoff_location_id || delivery.dropoff_address.trim() === '') return false;
+    if (step === 11) {
+      if (!delivery.pickup_location_id || !delivery.dropoff_location_id) return false;
       return pricing !== null;
     }
 
@@ -199,14 +195,12 @@ export default function CreateOrder() {
     if (!canAdvance()) {
       if (step === 2) toast.error('اختر نوع الخدمة أولاً');
       else if (step === 3) {
-        if (!form.locations.some(l => l.location_id)) toast.error('اختر منطقة تسعير لكل محطة');
-        else toast.error('أدخل عنوان التوصيل التفصيلي لكل محطة');
+        toast.error('اختر منطقة تسعير لكل محطة');
       } else if (step === 4) {
         if (form.num_places === null) toast.error('اختر عدد الأماكن');
       } else if (step === 10) toast.error('اختر شخص أو طرد');
-      else if (step === 11) toast.error('اختر منطقة الاستلام وأدخل العنوان التفصيلي');
-      else if (step === 12) {
-        if (!delivery.dropoff_location_id || !delivery.dropoff_address.trim()) toast.error('اختر منطقة التسليم وأدخل العنوان');
+      else if (step === 11) {
+        if (!delivery.pickup_location_id || !delivery.dropoff_location_id) toast.error('اختر منطقتي الاستلام والتسليم');
         else toast.error('لا يوجد سعر محدد لهذا المسار — تواصل مع المشرف');
       }
       return;
@@ -233,15 +227,14 @@ export default function CreateOrder() {
       if (isCommercial && businessProfile?.business_location_id) {
         setDelivery(d => ({
           ...d,
-          pickup_location_id: businessProfile.business_location_id,
-          pickup_address: businessProfile.business_location_name || businessProfile.business_name || ''
+          pickup_location_id: businessProfile.business_location_id
         }));
-        setStep(12); // skip step 11
+        setStep(11);
       } else {
         setStep(11);
       }
     } else if (isDeliveryStep) {
-      if (step === 13) return; // last delivery step — handled by submit
+      if (step === 11) return; // last delivery step — handled by submit
       setStep(step + 1);
     } else {
       setStep(step + 1);
@@ -250,11 +243,10 @@ export default function CreateOrder() {
 
   const handleBack = () => {
     if (isCommercial && businessProfile?.business_location_id) {
-      if (step === 13) setStep(12);
-      return; // Cannot go back beyond 12
+      if (step === 11) setStep(11); // nowhere to go back since 11 is the first step for them
+      return; 
     }
     if (step === 3 || step === 10) { setStep(2); } // both branch back to service select
-    else if (step === 12 && isCommercial && businessProfile?.business_location_id) { setStep(10); } // skip step 11 backwards too
     else if (isDeliveryStep) setStep(step - 1);
     else setStep(step - 1);
   };
@@ -266,27 +258,35 @@ export default function CreateOrder() {
       let payload;
 
       if (mode === 'delivery') {
+        const pickupArea  = locations.find(l => l.id === delivery.pickup_location_id);
+        const dropoffArea = locations.find(l => l.id === delivery.dropoff_location_id);
         payload = {
           vehicle_id: form.vehicle_id,
           service_type: 'delivery_service',
           delivery_sub_type: delivery.sub_type,
           pickup_location_id: delivery.pickup_location_id,
-          pickup_address: delivery.pickup_address,
+          pickup_address: pickupArea?.name_ar || 'بدون عنوان',
           dropoff_location_id: delivery.dropoff_location_id,
-          dropoff_address: delivery.dropoff_address,
+          dropoff_address: dropoffArea?.name_ar || 'بدون عنوان',
           notes: delivery.notes,
           promo_code: delivery.promo_code
         };
       } else {
-        const customer_address = form.locations.map(l => l.custom_address).filter(Boolean).join(' | ');
+        const customer_address = form.locations.map(l => {
+            const locObj = locations.find(loc => loc.id === l.location_id);
+            return locObj ? locObj.name_ar : '';
+        }).filter(Boolean).join(' | ');
         payload = {
           vehicle_id: form.vehicle_id,
           service_type: form.service_type,
-          locations: form.locations.map(l => ({
-            location_id: l.location_id || null,
-            custom_address: l.custom_address,
-            name: l.name
-          })),
+          locations: form.locations.map(l => {
+            const locObj = locations.find(loc => loc.id === l.location_id);
+            return {
+              location_id: l.location_id || null,
+              custom_address: locObj ? locObj.name_ar : 'بدون عنوان',
+              name: locObj ? locObj.name_ar : ''
+            };
+          }),
           items: form.service_type === 'driver_purchase' ? form.items : [],
           customer_address,
           notes: form.notes,
@@ -315,17 +315,12 @@ export default function CreateOrder() {
     { num: 2, title: 'الخدمة',   icon: <Truck size={14} /> },
     { num: 3, title: 'المواقع',  icon: <MapPin size={14} /> },
     { num: 4, title: 'الأماكن',  icon: <Store size={14} /> },
-    { num: 5, title: 'النوع',    icon: <ShoppingCart size={14} /> },
-    { num: 6, title: 'التفاصيل', icon: <Tag size={14} /> },
-    { num: 7, title: 'المراجعة', icon: <CheckCircle size={14} /> },
   ];
   const deliverySteps = [
     { num: 1,  title: 'المركبة',  icon: <Package size={14} /> },
     { num: 2,  title: 'الخدمة',   icon: <Truck size={14} /> },
     { num: 10, title: 'النوع',    icon: <Box size={14} /> },
-    { num: 11, title: 'الاستلام', icon: <MapPin size={14} /> },
-    { num: 12, title: 'التسليم',  icon: <Navigation size={14} /> },
-    { num: 13, title: 'مراجعة',   icon: <CheckCircle size={14} /> },
+    { num: 11, title: 'العناوين', icon: <MapPin size={14} /> },
   ];
 
   const activeSteps = isCommercial 
@@ -541,12 +536,6 @@ export default function CreateOrder() {
                         )}
                       </div>
                     )}
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Home size={11} /> العنوان التفصيلي (للسائق)</label>
-                      <input value={loc.custom_address} onChange={e => updateStop(idx, 'custom_address', e.target.value)}
-                        className="input-field text-sm" placeholder="الشارع، المبنى، أقرب معلم..." />
-                      <p className="text-[10px] text-gray-400 mt-0.5">هذا هو العنوان الفعلي الذي سيتوجه إليه السائق</p>
-                    </div>
                   </div>
                 );
               })}
@@ -626,100 +615,7 @@ export default function CreateOrder() {
             </div>
           )}
 
-          {/* ── Step 5: Shopping Review ──────────────────────────────────────── */}
-          {step === 5 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white">مراجعة الطلب</h3>
-              <div className="card flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-                <Navigation size={18} className="text-blue-500 flex-shrink-0" />
-                <div>
-                  <p className="text-xs text-blue-500 font-medium">نقطة انطلاق السائق</p>
-                  <p className="font-bold text-blue-700 dark:text-blue-300">السنطة</p>
-                </div>
-              </div>
-              <div className="card space-y-3">
-                <h4 className="font-semibold text-gray-800 dark:text-white text-sm border-b border-gray-100 dark:border-gray-700 pb-2">محطات التوصيل</h4>
-                {form.locations.map((loc, idx) => {
-                  const area = locations.find(l => l.id === loc.location_id);
-                  return (
-                    <div key={idx} className="space-y-1">
-                      <p className="text-xs font-bold text-primary-600">📍 عنوان العميل {idx + 1}</p>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500 flex items-center gap-1"><Tag size={11} /> المنطقة:</span>
-                        <span className="font-medium text-gray-800 dark:text-gray-200">{area ? area.name_ar : '—'}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500 flex items-center gap-1"><Home size={11} /> العنوان:</span>
-                        <span className="font-medium text-gray-800 dark:text-gray-200 text-right max-w-[55%]">{loc.custom_address || '—'}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {selectedPlacesOption && (
-                <div className="card space-y-2">
-                  <h4 className="font-semibold text-gray-800 dark:text-white text-sm border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center gap-2"><Store size={14} className="text-primary-500" /> عدد الأماكن للشراء</h4>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="inline-flex items-center gap-2 align-middle">{buildHomeIcons(selectedPlacesOption.min_places, selectedPlacesOption.is_open_ended)} {selectedPlacesOption.label_ar}</span>
-                    </span>
-                    <span className="text-sm font-bold text-primary-600">{form.places_fee === 0 ? 'بدون رسوم إضافية' : `+ ${form.places_fee} ج.م`}</span>
-                  </div>
-                </div>
-              )}
-              {pricing ? (
-                <div className="card space-y-2">
-                  <h4 className="font-semibold text-gray-800 dark:text-white text-sm border-b border-gray-100 dark:border-gray-700 pb-2">تفصيل الأسعار</h4>
-                  {pricing.locationBreakdown?.map(loc => (
-                    <div key={loc.id} className="flex justify-between text-sm">
-                      <span className="text-gray-500">توصيل ({loc.name_ar})</span>
-                      <span className="font-semibold">{loc.delivery_price} ج.م</span>
-                    </div>
-                  ))}
-                  {pricing.vehicleSurcharge > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">🚗 رسوم المركبة</span>
-                      <span className="font-semibold">{pricing.vehicleSurcharge} ج.م</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">رسوم الخدمة</span>
-                    <span className="font-semibold">{pricing.serviceFee} ج.م</span>
-                  </div>
-                  {pricing.placesFee > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 flex items-center gap-1"><Store size={11} /> رسوم عدد الأماكن ({selectedPlacesOption?.label_ar})</span>
-                      <span className="font-semibold">{pricing.placesFee} ج.م</span>
-                    </div>
-                  )}
-                  {pricing.itemsSubtotal > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">قيمة المشتريات</span>
-                      <span className="font-semibold">{pricing.itemsSubtotal} ج.م</span>
-                    </div>
-                  )}
-                  {pricing.promoDiscount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-green-600">خصم الكوبون</span>
-                      <span className="font-semibold text-green-600">-{pricing.promoDiscount} ج.م</span>
-                    </div>
-                  )}
-                  <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between">
-                    <span className="font-bold text-gray-900 dark:text-white">اجمالي سعر التوصيل</span>
-                    <span className="font-bold text-xl text-primary-600">{pricing.finalTotal} ج.م</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="card text-center py-6">
-                  <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">جاري حساب السعر...</p>
-                </div>
-              )}
-              <div className="card bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800">
-                <p className="text-sm text-primary-700 dark:text-primary-300">✅ بالضغط على "تأكيد الطلب"، أنت توافق على الشروط والأحكام</p>
-              </div>
-            </div>
-          )}
+
 
           {/* ══════════════════════════════════════════════════════════════════
               DELIVERY STEPS (10–13)
@@ -750,105 +646,88 @@ export default function CreateOrder() {
             </div>
           )}
 
-          {/* ── D2 (step 11): Pickup location ────────────────────────────────── */}
+          {/* ── D2 (step 11): Locations ────────────────────────────────── */}
           {step === 11 && (
             <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+              
+              {/* Pickup Section */}
+              <div className="card border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <MapPin size={18} className="text-green-500" />
-                  {delivery.sub_type === 'person' ? 'أين الشخص الآن؟' : 'أين الطرد الآن؟'}
+                  {delivery.sub_type === 'person' ? 'من أين؟' : 'أين الطرد؟'}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">  ادخل عنوانك ثم ادخل العنوان التفصيلي </p>
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة</label>
-                <input
-                  value={pickupSearch}
-                  onChange={e => { setPickupSearch(e.target.value); setDelivery({ ...delivery, pickup_location_id: '' }); setPickupOpen(true); }}
-                  onFocus={() => setPickupOpen(true)}
-                  onBlur={() => setTimeout(() => setPickupOpen(false), 150)}
-                  className="input-field"
-                  placeholder="ابحث عن المنطقة..."
-                />
-                {pickupOpen && (
-                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {locations.filter(l => !pickupSearch || l.name_ar.includes(pickupSearch)).length === 0 ? (
-                      <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
-                    ) : locations.filter(l => !pickupSearch || l.name_ar.includes(pickupSearch)).map(l => (
-                      <button key={l.id} type="button"
-                        onMouseDown={() => { setDelivery({ ...delivery, pickup_location_id: l.id }); setPickupSearch(l.name_ar); setPickupOpen(false); }}
-                        className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
-                        {l.name_ar}
-                      </button>
-                    ))}
+                
+                {isCommercial && businessProfile?.business_location_id ? (
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
+                    <Store size={16} className="text-amber-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">موقع الانطلاق (تلقائي)</p>
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{businessProfile.business_name}</p>
+                      <p className="text-xs text-amber-600">{businessProfile.business_location_name}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      value={pickupSearch}
+                      onChange={e => { setPickupSearch(e.target.value); setDelivery({ ...delivery, pickup_location_id: '' }); setPickupOpen(true); }}
+                      onFocus={() => setPickupOpen(true)}
+                      onBlur={() => setTimeout(() => setPickupOpen(false), 150)}
+                      className="input-field"
+                      placeholder="ابحث عن منطقة الاستلام..."
+                    />
+                    {pickupOpen && (
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                        {locations.filter(l => !pickupSearch || l.name_ar.includes(pickupSearch)).length === 0 ? (
+                          <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
+                        ) : locations.filter(l => !pickupSearch || l.name_ar.includes(pickupSearch)).map(l => (
+                          <button key={l.id} type="button"
+                            onMouseDown={() => { setDelivery({ ...delivery, pickup_location_id: l.id }); setPickupSearch(l.name_ar); setPickupOpen(false); }}
+                            className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                            {l.name_ar}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Home size={11} /> العنوان التفصيلي</label>
-                <input value={delivery.pickup_address}
-                  onChange={e => setDelivery({ ...delivery, pickup_address: e.target.value })}
-                  className="input-field" placeholder="الشارع، المبنى، أقرب معلم..." />
-              </div>
-            </div>
-          )}
 
-          {/* ── D3 (step 12): Dropoff location ───────────────────────────────── */}
-          {step === 12 && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+              {/* Dropoff Section */}
+              <div className="card border border-gray-200 dark:border-gray-700 p-4 space-y-3 mt-2">
+                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <Navigation size={18} className="text-red-500" />
-                  {delivery.sub_type === 'person' ? 'إلى أين يريد الذهاب؟' : 'إلى أين يُوصَّل الطرد؟'}
+                  {delivery.sub_type === 'person' ? 'إلى أين؟' : 'إلى أين يُوصَّل؟'}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">ادخل عنوانك ثم ادخل العنوان التفصيلي </p>
-              </div>
-
-              {isCommercial && businessProfile?.business_location_id && (
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl mb-4">
-                  <Store size={16} className="text-amber-500 flex-shrink-0" />
-                  <div>
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">موقع الانطلاق (تلقائي)</p>
-                    <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{businessProfile.business_name}</p>
-                    <p className="text-xs text-amber-600">{businessProfile.business_location_name}</p>
-                  </div>
+                
+                <div className="relative">
+                  <input
+                    value={dropoffSearch}
+                    onChange={e => { setDropoffSearch(e.target.value); setDelivery({ ...delivery, dropoff_location_id: '' }); setDropoffOpen(true); }}
+                    onFocus={() => setDropoffOpen(true)}
+                    onBlur={() => setTimeout(() => setDropoffOpen(false), 150)}
+                    className="input-field"
+                    placeholder="ابحث عن منطقة التسليم..."
+                  />
+                  {dropoffOpen && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                      {locations.filter(l => !dropoffSearch || l.name_ar.includes(dropoffSearch)).length === 0 ? (
+                        <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
+                      ) : locations.filter(l => !dropoffSearch || l.name_ar.includes(dropoffSearch)).map(l => (
+                        <button key={l.id} type="button"
+                          onMouseDown={() => { setDelivery({ ...delivery, dropoff_location_id: l.id }); setDropoffSearch(l.name_ar); setDropoffOpen(false); }}
+                          className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                          {l.name_ar}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-
-              <div className="relative">
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Tag size={11} /> المنطقة</label>
-                <input
-                  value={dropoffSearch}
-                  onChange={e => { setDropoffSearch(e.target.value); setDelivery({ ...delivery, dropoff_location_id: '' }); setDropoffOpen(true); }}
-                  onFocus={() => setDropoffOpen(true)}
-                  onBlur={() => setTimeout(() => setDropoffOpen(false), 150)}
-                  className="input-field"
-                  placeholder="ابحث عن المنطقة..."
-                />
-                {dropoffOpen && (
-                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {locations.filter(l => !dropoffSearch || l.name_ar.includes(dropoffSearch)).length === 0 ? (
-                      <p className="text-center text-sm text-gray-400 py-3">لا توجد نتائج</p>
-                    ) : locations.filter(l => !dropoffSearch || l.name_ar.includes(dropoffSearch)).map(l => (
-                      <button key={l.id} type="button"
-                        onMouseDown={() => { setDelivery({ ...delivery, dropoff_location_id: l.id }); setDropoffSearch(l.name_ar); setDropoffOpen(false); }}
-                        className="w-full text-right px-4 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
-                        {l.name_ar}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><Home size={11} /> العنوان التفصيلي</label>
-                <input value={delivery.dropoff_address}
-                  onChange={e => setDelivery({ ...delivery, dropoff_address: e.target.value })}
-                  className="input-field" placeholder="الشارع، المبنى، أقرب معلم..." />
               </div>
 
               {/* Route price preview */}
               {delivery.pickup_location_id && delivery.dropoff_location_id && (
-                <div className={`card border-2 text-center ${pricing !== null ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20' : 'border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'}`}>
+                <div className={`card border-2 text-center mt-2 ${pricing !== null ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20' : 'border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'}`}>
                   {lookingUpPrice ? (
                     <div className="flex items-center justify-center gap-2 py-2">
                       <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -860,6 +739,9 @@ export default function CreateOrder() {
                         {pickupArea?.name_ar} → {dropoffArea?.name_ar}
                       </p>
                       <p className="text-3xl font-bold text-primary-600">{pricing.deliveryFee} ج.م</p>
+                      {pricing?.promoDiscount > 0 && (
+                        <p className="text-sm font-bold text-green-600 mt-1">خصم: {pricing.promoDiscount} ج.م</p>
+                      )}
                       <p className="text-xs text-gray-500 mt-1">السعر الإجمالي لهذا المسار</p>
                     </>
                   ) : (
@@ -873,10 +755,10 @@ export default function CreateOrder() {
                 </div>
               )}
 
-              <div>
+              <div className="mt-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات (اختياري)</label>
                 <textarea value={delivery.notes} onChange={e => setDelivery({ ...delivery, notes: e.target.value })}
-                  className="input-field mb-3" rows={2} placeholder="ادخل سعر الاوردر .." />
+                  className="input-field mb-3" rows={2} placeholder="ادخل سعر الاوردر او اي تفاصيل.." />
               </div>
 
               <div>
@@ -886,73 +768,6 @@ export default function CreateOrder() {
                     className="input-field pr-10 uppercase" placeholder="أدخل كود الخصم" />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🎟</span>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── D4 (step 13): Delivery Review & Confirm ──────────────────────── */}
-          {step === 13 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white">مراجعة وتأكيد الطلب</h3>
-
-              <div className="card space-y-3 border-2 border-primary-200 dark:border-primary-800">
-                <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-gray-700">
-                  {delivery.sub_type === 'person'
-                    ? <><User size={18} className="text-primary-500" /><span className="font-bold text-gray-900 dark:text-white">توصيل شخص</span></>
-                    : <><Box size={18} className="text-primary-500" /><span className="font-bold text-gray-900 dark:text-white">توصيل طرد</span></>}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <MapPin size={12} className="text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400 font-medium">{delivery.sub_type === 'person' ? 'موقع الشخص' : 'موقع الطرد'}</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{pickupArea?.name_ar}</p>
-                      <p className="text-sm text-gray-500">{delivery.pickup_address}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Navigation size={12} className="text-red-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400 font-medium">الوجهة</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{dropoffArea?.name_ar}</p>
-                      <p className="text-sm text-gray-500">{delivery.dropoff_address}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-300 font-medium">سعر التوصيل</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{pricing?.deliveryFee} ج.م</span>
-                  </div>
-                  {pricing?.promoDiscount > 0 && (
-                    <div className="flex justify-between items-center text-green-600 mt-1">
-                      <span className="text-sm font-medium">خصم الكود</span>
-                      <span className="font-bold">-{pricing?.promoDiscount} ج.م</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <span className="font-bold text-gray-900 dark:text-white">الإجمالي</span>
-                    <span className="text-2xl font-bold text-primary-600">{pricing?.finalTotal} ج.م</span>
-                  </div>
-                </div>
-              </div>
-
-              {delivery.notes && (
-                <div className="card bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
-                  <p className="text-xs text-amber-600 font-medium mb-1">🗒 ملاحظات</p>
-                  <p className="text-sm text-amber-800 dark:text-amber-300">{delivery.notes}</p>
-                </div>
-              )}
-
-              <div className="card bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800">
-                <p className="text-sm text-primary-700 dark:text-primary-300">✅ بالضغط على "تأكيد الطلب"، أنت توافق على الشروط والأحكام</p>
               </div>
             </div>
           )}
