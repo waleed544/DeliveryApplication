@@ -1,19 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { DollarSign, Save, Percent, Store, Plus, Power, Trash2 } from 'lucide-react';
+import { DollarSign, Save, Percent } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminPricing() {
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [promoCodes, setPromoCodes] = useState([]);
-  const [promo, setPromo] = useState({ code: '', discount_value: '', max_uses: '', min_order_amount: '', expires_at: '' });
-  const [promoSaving, setPromoSaving] = useState(false);
-
   useEffect(() => {
     api.get('/pricing').then(r => { setSettings(r.data); setLoading(false); }).catch(() => setLoading(false));
-    api.get('/settings/promo-codes').then(r => setPromoCodes(r.data)).catch(() => {});
   }, []);
 
   const updateSetting = (key, value) => {
@@ -41,40 +36,7 @@ export default function AdminPricing() {
     }
   };
 
-  const addPromoCode = async (e) => {
-    e.preventDefault();
-    setPromoSaving(true);
-    try {
-      const response = await api.post('/settings/promo-codes', promo);
-      setPromoCodes([response.data, ...promoCodes]);
-      setPromo({ code: '', discount_value: '', max_uses: '', min_order_amount: '', expires_at: '' });
-      toast.success('تمت إضافة كود الخصم');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'فشل إضافة كود الخصم');
-    } finally {
-      setPromoSaving(false);
-    }
-  };
 
-  const togglePromo = async (item) => {
-    try {
-      await api.put(`/settings/promo-codes/${item.id}`, { is_active: !item.is_active });
-      setPromoCodes(promoCodes.map(code => code.id === item.id ? { ...code, is_active: !code.is_active } : code));
-    } catch {
-      toast.error('فشل تحديث كود الخصم');
-    }
-  };
-
-  const deletePromo = async (id) => {
-    if (!window.confirm('هل أنت متأكد من حذف كود الخصم هذا؟')) return;
-    try {
-      await api.delete(`/settings/promo-codes/${id}`);
-      setPromoCodes(promoCodes.filter(code => code.id !== id));
-      toast.success('تم حذف كود الخصم');
-    } catch {
-      toast.error('فشل حذف كود الخصم');
-    }
-  };
 
   // Legacy keys that are no longer used (system now uses per-location pricing)
   const HIDDEN_KEYS = ['motorcycle_base', 'tuk_tuk_base', 'car_base', 'additional_location', 'ready_items_fee', 'driver_purchase_fee'];
