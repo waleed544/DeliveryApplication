@@ -215,7 +215,9 @@ export default function AdminDeliveryPrices() {
       {filteredPrices.length === 0 ? (
         <div className="card text-center py-10">
           <Route size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500">لا توجد مسارات بعد — أضف أول مسار من النموذج أعلاه</p>
+          <p className="text-gray-500 font-bold text-lg">
+            {search.trim() ? 'لم يتم العثور' : 'لا توجد مسارات بعد — أضف أول مسار من النموذج أعلاه'}
+          </p>
         </div>
       ) : (
         <div className="card overflow-x-auto p-0">

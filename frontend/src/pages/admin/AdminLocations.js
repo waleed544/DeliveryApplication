@@ -111,6 +111,9 @@ export default function AdminLocations() {
           onChange={e => setSearch(e.target.value)}
           className="input-field pr-10"
           placeholder="ابحث عن منطقة..."
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
       </div>
@@ -181,7 +184,11 @@ export default function AdminLocations() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {filteredLocations.length === 0 && (
-                <tr><td colSpan={4} className="text-center py-8 text-gray-400">لا توجد نتائج</td></tr>
+                <tr>
+                  <td colSpan={4} className="text-center py-8 text-gray-500 font-bold text-lg">
+                    {search.trim() ? "لم يتم العثور" : "لا توجد نتائج"}
+                  </td>
+                </tr>
               )}
               {filteredLocations.map(loc => (
                 <tr key={loc.id} className={`transition-colors ${!loc.is_active ? 'opacity-50' : ''} hover:bg-gray-50 dark:hover:bg-gray-800/40`}>
