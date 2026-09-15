@@ -12,6 +12,25 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+// Arabic relative time helper (same as DriverOrders)
+const timeAgo = (dateStr) => {
+  if (!dateStr) return 'الآن';
+  const ts = new Date(dateStr).getTime();
+  if (isNaN(ts)) return 'الآن';
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'الآن';
+  if (diff < 3600) {
+    const m = Math.floor(diff / 60);
+    return m === 1 ? 'منذ دقيقة' : `منذ ${m} دقايق`;
+  }
+  if (diff < 86400) {
+    const h = Math.floor(diff / 3600);
+    return h === 1 ? 'منذ ساعة' : `منذ ${h} ساعات`;
+  }
+  const d = Math.floor(diff / 86400);
+  return d === 1 ? 'منذ يوم' : `منذ ${d} أيام`;
+};
+
 export default function DriverDashboard() {
   const socket = useSocket();
   const { user } = useAuth();
@@ -22,6 +41,7 @@ export default function DriverDashboard() {
   const [accepting, setAccepting]             = useState(null);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [balanceDepleted, setBalanceDepleted] = useState(false);
+  const [, setTick] = useState(0); // force re-render for timeAgo auto-update
   const { accepting_orders, offline_message } = useSiteStatus();
 
   // ─ Order-tracking location state (only while delivering) ─────────────
@@ -80,19 +100,21 @@ export default function DriverDashboard() {
       fetchDashboard();
       fetchAvailable();
     }, 10000);
-    return () => clearInterval(interval);
+    // Auto-update relative time labels every 30 s
+    const tickInterval = setInterval(() => setTick(t => t + 1), 30000);
+    return () => { clearInterval(interval); clearInterval(tickInterval); };
   }, [fetchDashboard, fetchAvailable]);
 
   // Real-time socket events
   useEffect(() => {
     const handleNewOrder = (order) => {
-      // A socket event can arrive before the next polling refresh. Never show
-      // new work to a driver whose prepaid balance is already depleted.
       if (prepaidBalanceRef.current <= 0) return;
       setAvailableOrders(prev => {
         if (prev.some(o => o.id === order.id)) return prev;
         toast.success('📦 طلب جديد متاح!', { duration: 4000 });
-        return [order, ...prev];
+        // Ensure created_at is always present for timeAgo display
+        const orderWithTime = order.created_at ? order : { ...order, created_at: new Date().toISOString() };
+        return [orderWithTime, ...prev];
       });
     };
     const handleOrderUpdate = ({ orderId, status }) => {
@@ -555,6 +577,7 @@ export default function DriverDashboard() {
                         <MapPin size={11} className="flex-shrink-0 text-primary-400" />
                         {order.customer_address?.substring(0, 60)}{order.customer_address?.length > 60 ? '...' : ''}
                       </p>
+                      <p className="text-xs text-gray-400 mt-0.5">🕐 {timeAgo(order.created_at)}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-primary-600 text-lg">{parseFloat(order.final_total).toFixed(0)} ج.م</p>

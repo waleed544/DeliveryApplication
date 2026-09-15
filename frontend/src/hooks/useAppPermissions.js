@@ -5,100 +5,130 @@ import { Geolocation } from '@capacitor/geolocation';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
-export const useAppPermissions = (user) => {
-  // Track whether we've already set up listeners in this session
-  // to avoid stacking duplicate listeners on re-renders
-  const listenersSetUp = useRef(false);
+// Module-level cache: persists across renders and user login/logout.
+// When FCM fires the token while the user is not logged in yet,
+// we store it here so we can send it immediately after login.
+let _pendingFcmToken = null;
 
+const registerTokenWithBackend = async (token, user) => {
+  if (!token || !user) return;
+  try {
+    await api.post('/notifications/register-token', {
+      token,
+      type: user?.role || 'customer',
+    });
+    console.log('[FCM] Token registered with backend for user:', user.id);
+  } catch (err) {
+    console.error('[FCM] Failed to register token with backend:', err?.response?.data || err.message);
+  }
+};
+
+export const useAppPermissions = (user) => {
+  const setupDone = useRef(false); // ensure push setup runs only once per app session
+
+  // ── Effect 1: User just logged in ───────────────────────────────────────
+  // If we already obtained the FCM token before the user logged in,
+  // send it to the backend now that we have a valid user object.
   useEffect(() => {
-    // Only run natively on Android/iOS, not in web browser
+    if (user && _pendingFcmToken) {
+      console.log('[FCM] User logged in with a pending token — registering now.');
+      registerTokenWithBackend(_pendingFcmToken, user);
+      _pendingFcmToken = null; // clear so we don't double-register
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  // ── Effect 2: Initial permissions + push setup (runs once) ──────────────
+  useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+    if (setupDone.current) return; // already set up in this session
+    setupDone.current = true;
 
     requestAllPermissions();
-
-    // Cleanup listeners when component unmounts or user changes
-    return () => {
-      PushNotifications.removeAllListeners();
-      listenersSetUp.current = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]); // re-run when the logged-in user changes (login/logout)
+    // Note: we intentionally do NOT call removeAllListeners on cleanup here,
+    // because the push listeners must survive across route changes and re-renders.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const requestAllPermissions = async () => {
     try {
-      // 1. Request Foreground Location Permission
+      // 1. Location permission
       const locStatus = await Geolocation.checkPermissions();
       if (locStatus.location !== 'granted') {
         const locRequest = await Geolocation.requestPermissions();
         if (locRequest.location !== 'granted') {
-          console.warn('Location permission denied gracefully. App continues without it.');
+          console.warn('[Permissions] Location denied — app continues without it.');
         }
       }
 
-      // 2. Request Push Notification Permission
+      // 2. Push notification permission
       const pushStatus = await PushNotifications.checkPermissions();
       if (pushStatus.receive !== 'granted') {
         const pushRequest = await PushNotifications.requestPermissions();
         if (pushRequest.receive !== 'granted') {
-          console.warn('Push notification permission denied gracefully.');
+          console.warn('[Permissions] Push notifications denied — skipping registration.');
           return;
         }
       }
 
-      // 3. Always set up push after reinstall — even if permissions were
-      //    already granted, we must re-register to obtain a fresh token
+      // 3. Set up push listeners + register
       await setupPushNotifications();
-
     } catch (error) {
-      console.error('Error requesting permissions:', error);
+      console.error('[Permissions] Error during permission setup:', error);
     }
   };
 
   const setupPushNotifications = async () => {
     try {
-      // Remove any existing listeners before adding new ones to prevent
-      // duplicate handlers accumulating across re-renders / reinstalls
+      // Clear stale listeners before adding fresh ones
       await PushNotifications.removeAllListeners();
-      listenersSetUp.current = false;
 
-      // Re-register with FCM — this always yields the current valid token.
-      // After a reinstall the OS issues a new token; calling register() fetches it.
-      await PushNotifications.register();
-
-      // Only add listeners once per session
-      if (listenersSetUp.current) return;
-      listenersSetUp.current = true;
+      // ── IMPORTANT: Add listeners BEFORE calling register() ──────────────
+      // register() fires the 'registration' event almost synchronously on
+      // Android. If we add the listener after, we miss the token entirely.
 
       PushNotifications.addListener('registration', async (token) => {
-        console.log('FCM token received:', token.value);
-        if (!user) return; // Guard: only register if someone is logged in
-        try {
-          await api.post('/notifications/register-token', {
-            token: token.value,
-            type: user?.role || 'customer'
-          });
-          console.log('FCM token registered with backend successfully.');
-        } catch (err) {
-          console.error('Failed to register FCM token with backend:', err);
+        console.log('[FCM] Token received:', token.value);
+
+        // Read the current user from the module-level ref approach via
+        // the closure captured at setup time. Since setup runs once, we
+        // use a trick: try to register immediately; if user isn't available
+        // yet (app cold-start before login), cache the token for Effect 1.
+        const currentUser = _currentUserRef.current;
+        if (currentUser) {
+          await registerTokenWithBackend(token.value, currentUser);
+        } else {
+          console.log('[FCM] No user logged in yet — caching token for after login.');
+          _pendingFcmToken = token.value;
         }
       });
 
       PushNotifications.addListener('registrationError', (error) => {
-        console.error('Push registration error:', JSON.stringify(error));
+        console.error('[FCM] Registration error:', JSON.stringify(error));
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        // Show in-app toast when the app is foregrounded
-        toast(notification.title + (notification.body ? '\n' + notification.body : ''), { icon: '🔔' });
+        // Foreground notification → show toast
+        toast(
+          (notification.title || '') + (notification.body ? '\n' + notification.body : ''),
+          { icon: '🔔', duration: 5000 }
+        );
       });
 
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        // User tapped the notification — can route to order details in future
-        console.log('Notification tapped:', notification);
+        console.log('[FCM] Notification tapped:', notification);
       });
 
+      // Now request the token from FCM — fires the 'registration' event above
+      await PushNotifications.register();
+
     } catch (error) {
-      console.error('Error setting up push notifications:', error);
+      console.error('[FCM] Error setting up push notifications:', error);
     }
   };
 };
+
+// Module-level ref to always access the latest user inside the one-time listener.
+// We keep it as a plain object so the listener closure (set up once) can always
+// read the current value without needing re-registration.
+export const _currentUserRef = { current: null };
