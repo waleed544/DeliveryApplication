@@ -42,8 +42,16 @@ router.post('/register-token', authenticate, async (req, res) => {
        return res.status(400).json({ message: 'Invalid user type' });
     }
 
-    // Insert or Do Nothing (if token already exists)
-    // If token exists but belongs to a different user, update it to the current user (e.g., someone logged out and someone else logged in on same phone).
+    // Delete any previously registered tokens for this specific user/driver
+    // This is critical after reinstall: the OS issues a new FCM token, so the old
+    // one in the DB is now invalid. Removing it prevents failed notification attempts.
+    if (finalDriverId) {
+      await pool.query('DELETE FROM device_tokens WHERE driver_id = $1 AND token != $2', [finalDriverId, token]);
+    } else if (finalUserId) {
+      await pool.query('DELETE FROM device_tokens WHERE user_id = $1 AND token != $2', [finalUserId, token]);
+    }
+
+    // Upsert the new token (handles the case where the same token is re-submitted)
     await pool.query(`
       INSERT INTO device_tokens (user_id, driver_id, token, updated_at)
       VALUES ($1, $2, $3, NOW())

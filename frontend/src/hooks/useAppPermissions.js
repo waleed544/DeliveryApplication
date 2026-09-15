@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation';
@@ -6,15 +6,23 @@ import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 export const useAppPermissions = (user) => {
-  const [permissionsGranted, setPermissionsGranted] = useState(false);
+  // Track whether we've already set up listeners in this session
+  // to avoid stacking duplicate listeners on re-renders
+  const listenersSetUp = useRef(false);
 
   useEffect(() => {
     // Only run natively on Android/iOS, not in web browser
-    if (Capacitor.isNativePlatform()) {
-      requestAllPermissions();
-    }
+    if (!Capacitor.isNativePlatform()) return;
+
+    requestAllPermissions();
+
+    // Cleanup listeners when component unmounts or user changes
+    return () => {
+      PushNotifications.removeAllListeners();
+      listenersSetUp.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.id]); // re-run when the logged-in user changes (login/logout)
 
   const requestAllPermissions = async () => {
     try {
@@ -24,7 +32,6 @@ export const useAppPermissions = (user) => {
         const locRequest = await Geolocation.requestPermissions();
         if (locRequest.location !== 'granted') {
           console.warn('Location permission denied gracefully. App continues without it.');
-          // Do not crash, just continue
         }
       }
 
@@ -38,12 +45,10 @@ export const useAppPermissions = (user) => {
         }
       }
 
-      // If user is logged in and push is granted, register for push
-      if (user) {
-        setupPushNotifications();
-      }
+      // 3. Always set up push after reinstall — even if permissions were
+      //    already granted, we must re-register to obtain a fresh token
+      await setupPushNotifications();
 
-      setPermissionsGranted(true);
     } catch (error) {
       console.error('Error requesting permissions:', error);
     }
@@ -51,41 +56,49 @@ export const useAppPermissions = (user) => {
 
   const setupPushNotifications = async () => {
     try {
-      // Register with Apple / Google to receive token via register event
+      // Remove any existing listeners before adding new ones to prevent
+      // duplicate handlers accumulating across re-renders / reinstalls
+      await PushNotifications.removeAllListeners();
+      listenersSetUp.current = false;
+
+      // Re-register with FCM — this always yields the current valid token.
+      // After a reinstall the OS issues a new token; calling register() fetches it.
       await PushNotifications.register();
 
-      // Setup Listeners
+      // Only add listeners once per session
+      if (listenersSetUp.current) return;
+      listenersSetUp.current = true;
+
       PushNotifications.addListener('registration', async (token) => {
-        console.log('Push registration success, token: ' + token.value);
+        console.log('FCM token received:', token.value);
+        if (!user) return; // Guard: only register if someone is logged in
         try {
-          // Send token to backend
           await api.post('/notifications/register-token', {
             token: token.value,
-            type: user?.role || user?.type || 'customer'
+            type: user?.role || 'customer'
           });
+          console.log('FCM token registered with backend successfully.');
         } catch (err) {
-          console.error('Failed to register token with backend:', err);
+          console.error('Failed to register FCM token with backend:', err);
         }
       });
 
       PushNotifications.addListener('registrationError', (error) => {
-        console.error('Push registration error: ' + JSON.stringify(error));
+        console.error('Push registration error:', JSON.stringify(error));
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('Push received: ', notification);
-        toast(notification.title + '\n' + notification.body, { icon: '🔔' });
+        // Show in-app toast when the app is foregrounded
+        toast(notification.title + (notification.body ? '\n' + notification.body : ''), { icon: '🔔' });
       });
 
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        console.log('Push action performed: ', notification);
-        // Could redirect user to order details based on notification.data.orderId
+        // User tapped the notification — can route to order details in future
+        console.log('Notification tapped:', notification);
       });
 
     } catch (error) {
       console.error('Error setting up push notifications:', error);
     }
   };
-
-  return { permissionsGranted };
 };

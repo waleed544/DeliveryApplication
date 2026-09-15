@@ -15,8 +15,11 @@ const storeEmoji = (n) => '🏪'.repeat(Math.min(n || 1, 5));
 
 // Arabic relative time helper
 const timeAgo = (dateStr) => {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return 'الان';
+  if (!dateStr) return 'الآن';
+  const ts = new Date(dateStr).getTime();
+  if (isNaN(ts)) return 'الآن';
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'الآن';
   if (diff < 3600) {
     const m = Math.floor(diff / 60);
     return m === 1 ? 'منذ دقيقة' : `منذ ${m} دقايق`;
@@ -142,7 +145,9 @@ export default function DriverOrders() {
       setAvailableOrders(prev => {
         if (prev.some(o => o.id === order.id)) return prev;
         toast.success('📦 طلب جديد متاح!', { duration: 4000 });
-        return [order, ...prev];
+        // Ensure created_at is always present for timeAgo display
+        const orderWithTime = order.created_at ? order : { ...order, created_at: new Date().toISOString() };
+        return [orderWithTime, ...prev];
       });
     };
 
