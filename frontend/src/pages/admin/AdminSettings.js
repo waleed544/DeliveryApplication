@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { Power, MessageSquare, Save, AlertTriangle, CheckCircle, Shield } from 'lucide-react';
+import { Power, MessageSquare, Save, AlertTriangle, CheckCircle, Shield, Phone, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const QUICK_MESSAGES = [
@@ -17,6 +17,8 @@ export default function AdminSettings() {
   const [saving, setSaving] = useState(false);
   const [account, setAccount] = useState({ phone: '', password: '' });
   const [accountSaving, setAccountSaving] = useState(false);
+  const [supportPhones, setSupportPhones] = useState([]);
+  const [phoneSaving, setPhoneSaving] = useState(false);
 
   useEffect(() => {
     api.get('/admin/settings')
@@ -24,6 +26,14 @@ export default function AdminSettings() {
       .catch(() => {})
       .finally(() => setLoading(false));
     api.get('/users/me').then(r => setAccount({ phone: r.data.phone || '', password: '' })).catch(() => {});
+    api.get('/settings').then(r => {
+      if (r.data.support_phones) {
+        try {
+          const phones = JSON.parse(r.data.support_phones);
+          if (Array.isArray(phones)) setSupportPhones(phones);
+        } catch {}
+      }
+    }).catch(() => {});
   }, []);
 
   const save = async () => {
@@ -132,6 +142,74 @@ export default function AdminSettings() {
           : <><Save size={16} /> حفظ الإعدادات</>
         }
       </button>
+
+      {/* Support Phones */}
+      <div className="card space-y-4">
+        <div className="flex items-center gap-2">
+          <Phone size={19} className="text-green-500" />
+          <div>
+            <h2 className="font-bold text-gray-900 dark:text-white">أرقام الدعم الفني</h2>
+            <p className="text-xs text-gray-500">هذه الأرقام ستظهر للعملاء في صفحة الدعم (حد أقصى 3 أرقام)</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {supportPhones.map((phone, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <input
+                type="tel"
+                className="input-field flex-1"
+                value={phone}
+                placeholder="رقم الهاتف"
+                onChange={e => {
+                  const updated = [...supportPhones];
+                  updated[idx] = e.target.value;
+                  setSupportPhones(updated);
+                }}
+              />
+              <button
+                onClick={() => setSupportPhones(prev => prev.filter((_, i) => i !== idx))}
+                className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {supportPhones.length < 3 && (
+          <button
+            onClick={() => setSupportPhones(prev => [...prev, ''])}
+            className="btn-secondary flex items-center gap-2 text-sm w-full justify-center"
+          >
+            <Plus size={16} /> إضافة رقم
+          </button>
+        )}
+
+        <button
+          disabled={phoneSaving}
+          onClick={async () => {
+            const filtered = supportPhones.filter(p => p.trim());
+            if (filtered.length === 0) { toast.error('أضف رقم واحد على الأقل'); return; }
+            setPhoneSaving(true);
+            try {
+              await api.put('/settings/support_phones', { value: JSON.stringify(filtered) });
+              setSupportPhones(filtered);
+              toast.success('✅ تم حفظ أرقام الدعم');
+            } catch {
+              toast.error('فشل حفظ الأرقام');
+            } finally {
+              setPhoneSaving(false);
+            }
+          }}
+          className="btn-primary w-full flex items-center justify-center gap-2"
+        >
+          {phoneSaving
+            ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> جاري الحفظ...</>
+            : <><Save size={16} /> حفظ أرقام الدعم</>
+          }
+        </button>
+      </div>
 
       <form onSubmit={saveAccount} className="card space-y-4">
         <div className="flex items-center gap-2">

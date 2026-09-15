@@ -12,11 +12,22 @@ export default function CustomerLayout() {
   const navigate = useNavigate();
   const [showSupport, setShowSupport] = useState(false);
   const [completedOrders, setCompletedOrders] = useState(0);
+  const [supportPhones, setSupportPhones] = useState(['01019488741']);
 
   useEffect(() => {
     api.get('/customers/profile').then(res => {
       if (res.data) setCompletedOrders(parseInt(res.data.completed_orders || 0, 10));
     }).catch(err => console.error('Failed to fetch profile', err));
+
+    // Fetch support phones from settings
+    api.get('/settings').then(res => {
+      if (res.data.support_phones) {
+        try {
+          const phones = JSON.parse(res.data.support_phones);
+          if (Array.isArray(phones) && phones.length > 0) setSupportPhones(phones);
+        } catch {}
+      }
+    }).catch(() => {});
   }, []);
 
   const navItems = [
@@ -56,13 +67,18 @@ export default function CustomerLayout() {
                 <div className="absolute top-11 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 text-right">
                   <p className="font-bold text-gray-900 dark:text-white mb-1 text-sm">📞 الدعم الفني</p>
                   <p className="text-xs text-gray-500 mb-3">للمساعدة تواصل مع الإدارة</p>
-                  <a
-                    href="tel:01019488741"
-                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-colors text-sm"
-                    onClick={() => setShowSupport(false)}
-                  >
-                    <PhoneCall size={15} /> 01019488741
-                  </a>
+                  <div className="space-y-2">
+                    {supportPhones.map((phone, idx) => (
+                      <a
+                        key={idx}
+                        href={`tel:${phone}`}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-colors text-sm"
+                        onClick={() => setShowSupport(false)}
+                      >
+                        <PhoneCall size={15} /> {phone}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

@@ -13,6 +13,22 @@ import toast from 'react-hot-toast';
 // Build store emojis
 const storeEmoji = (n) => '🏪'.repeat(Math.min(n || 1, 5));
 
+// Arabic relative time helper
+const timeAgo = (dateStr) => {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return 'الان';
+  if (diff < 3600) {
+    const m = Math.floor(diff / 60);
+    return m === 1 ? 'منذ دقيقة' : `منذ ${m} دقايق`;
+  }
+  if (diff < 86400) {
+    const h = Math.floor(diff / 3600);
+    return h === 1 ? 'منذ ساعة' : `منذ ${h} ساعات`;
+  }
+  const d = Math.floor(diff / 86400);
+  return d === 1 ? 'منذ يوم' : `منذ ${d} أيام`;
+};
+
 export default function DriverOrders() {
   const socket = useSocket();
   const [availableOrders, setAvailableOrders] = useState([]);
@@ -23,6 +39,7 @@ export default function DriverOrders() {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [, setTick] = useState(0); // force re-render for timeAgo updates
 
   const printReceipt = (order) => {
     const printWindow = window.open('', '_blank', 'width=420,height=700');
@@ -87,6 +104,12 @@ export default function DriverOrders() {
       }
       setLoading(false);
     }).catch(() => setLoading(false));
+  }, []);
+
+  // Auto-update relative times every 30 seconds
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -557,6 +580,7 @@ export default function DriverOrders() {
                         </div>
                         <p className="text-sm font-semibold text-gray-800 dark:text-white mt-1">👤 {order.customer_name}</p>
                         <p className="text-xs text-gray-500 mt-0.5 truncate">📍 {order.customer_address?.substring(0, 60)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">🕐 {timeAgo(order.created_at)}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="font-bold text-primary-600 text-lg">{parseFloat(order.final_total).toFixed(0)} ج.م</p>

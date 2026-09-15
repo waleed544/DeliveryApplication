@@ -46,6 +46,7 @@ export default function CreateOrder() {
   const navigate = useNavigate();
   const { accepting_orders, offline_message } = useSiteStatus();
   const { isCommercial, businessProfile } = useAuth();
+  const [supportPhone, setSupportPhone] = useState('01019488741');
 
   // ── Shopping form state ───────────────────────────────────────────────────
   const [form, setForm] = useState({
@@ -97,6 +98,14 @@ export default function CreateOrder() {
       const map = {};
       r.data.forEach(s => { map[s.key] = parseFloat(s.value) || 0; });
       setPricingSettings(map);
+    }).catch(() => {});
+    api.get('/settings').then(r => {
+      if (r.data.support_phones) {
+        try {
+          const phones = JSON.parse(r.data.support_phones);
+          if (Array.isArray(phones) && phones.length > 0) setSupportPhone(phones[0]);
+        } catch {}
+      }
     }).catch(() => {});
   }, [isCommercial, businessProfile]);
 
@@ -399,8 +408,8 @@ export default function CreateOrder() {
                       <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
                         لطلب {vehicleName} يرجى التواصل مع الإدارة
                       </p>
-                      <a href="tel:01019488741" className="inline-block mt-1 text-sm font-bold text-amber-700 dark:text-amber-300 underline">
-                        01019488741
+                      <a href={`tel:${supportPhone}`} className="inline-block mt-1 text-sm font-bold text-amber-700 dark:text-amber-300 underline">
+                        {supportPhone}
                       </a>
                       <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">رسوم إضافية {fee} ج</p>
                     </div>
@@ -727,7 +736,7 @@ export default function CreateOrder() {
                       <AlertTriangle size={24} className="mx-auto text-amber-500 mb-1" />
                       <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">لم يتم تحديد سعر لهذا المسار بعد</p>
                       <p className="text-xs text-amber-600 dark:text-amber-400">تواصل مع المشرف لإضافة هذا المسار </p>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">01019488741</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">{supportPhone}</p>
                     </>
                   )}
                 </div>
