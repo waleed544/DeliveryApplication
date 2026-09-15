@@ -236,10 +236,12 @@ router.put('/settings', async (req, res) => {
         ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()
       `, [offline_message]);
     }
-    // Notify all users when the service is turned off (fire-and-forget, non-blocking)
+    // Notify all users when the service status changes (fire-and-forget, non-blocking)
     if (!accepting_orders) {
       const msg = offline_message || 'الخدمة متوقفة مؤقتاً — سنعود قريباً';
       notifyAllUsers('⚠️ الموقع متوقف مؤقتاً', msg, { type: 'site_offline' }).catch(() => {});
+    } else {
+      notifyAllUsers('✅ الموقع متاح الآن', 'عادت الخدمة — يمكنك الآن تقديم الطلبات', { type: 'site_online' }).catch(() => {});
     }
     res.json({ message: 'Settings updated' });
   } catch (error) {
