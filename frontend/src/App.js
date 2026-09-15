@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
-import { useAppPermissions, _currentUserRef } from './hooks/useAppPermissions';
+import { useAppPermissions } from './hooks/useAppPermissions';
 
 // Layouts
 import CustomerLayout from './components/customer/CustomerLayout';
@@ -48,9 +48,6 @@ function App() {
   const { user, loading } = useAuth();
   const { isDark } = useTheme();
   useAppPermissions(user);
-  // Keep the module-level ref in sync so the one-time FCM listener
-  // always sees the latest user even after login/logout.
-  React.useEffect(() => { _currentUserRef.current = user; }, [user]);
 
   if (loading) {
     return (
