@@ -5,6 +5,7 @@ const fs = require('fs');
 const { authenticate, authorize } = require('../middleware/auth');
 const { bannerUpload } = require('../middleware/upload');
 const db = require('../config/db');
+const { notifyAllUsers } = require('../services/notificationService');
 
 // Helper: delete avatar file from disk if it's a local upload
 const deleteAvatarFile = (avatarUrl) => {
@@ -68,6 +69,12 @@ router.post('/banners', bannerUpload.single('image'), async (req, res) => {
        VALUES ($1, $2, $3, $4) RETURNING *`,
       [title || null, `/uploads/banners/${req.file.filename}`, audience, Number(sort_order) || 0]
     );
+    // Notify all users about the new ad (fire-and-forget, non-blocking)
+    if (title) {
+      notifyAllUsers('📢 إعلان جديد', title, { type: 'new_banner' }).catch(() => {});
+    } else {
+      notifyAllUsers('📢 إعلان جديد', 'تم نشر إعلان جديد على التطبيق', { type: 'new_banner' }).catch(() => {});
+    }
     res.status(201).json(result.rows[0]);
   } catch (error) {
     if (req.file) deleteBannerFile(`/uploads/banners/${req.file.filename}`);
@@ -228,6 +235,11 @@ router.put('/settings', async (req, res) => {
         VALUES ('offline_message', $1, 'Message shown when orders are disabled')
         ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()
       `, [offline_message]);
+    }
+    // Notify all users when the service is turned off (fire-and-forget, non-blocking)
+    if (!accepting_orders) {
+      const msg = offline_message || 'الخدمة متوقفة مؤقتاً — سنعود قريباً';
+      notifyAllUsers('⚠️ الموقع متوقف مؤقتاً', msg, { type: 'site_offline' }).catch(() => {});
     }
     res.json({ message: 'Settings updated' });
   } catch (error) {

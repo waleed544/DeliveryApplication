@@ -158,9 +158,27 @@ async function notifyDrivers(driverIds, title, body, data = {}) {
   }
 }
 
+/**
+ * Wrapper: Notify ALL users and drivers (broadcast)
+ * Used for site-wide events like new ads or service downtime.
+ */
+async function notifyAllUsers(title, body, data = {}) {
+  try {
+    const res = await pool.query('SELECT token FROM device_tokens');
+    const tokens = res.rows.map(r => r.token);
+    if (tokens.length > 0) {
+      await sendPushNotification(tokens, { title, body, data });
+      console.log(`[FCM] Broadcast sent to ${tokens.length} devices.`);
+    }
+  } catch (err) {
+    console.error('[FCM] Error broadcasting notification:', err);
+  }
+}
+
 module.exports = {
   sendPushNotification,
   notifyUser,
   notifyDriver,
-  notifyDrivers
+  notifyDrivers,
+  notifyAllUsers,
 };
