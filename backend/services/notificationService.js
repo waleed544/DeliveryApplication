@@ -175,10 +175,64 @@ async function notifyAllUsers(title, body, data = {}) {
   }
 }
 
+/**
+ * Wrapper: Notify a user by their users.id (user_id)
+ * Works for both customers and drivers — searches both columns.
+ * Used for chat notifications where the recipient could be either role.
+ */
+async function notifyByUserId(userId, title, body, data = {}) {
+  try {
+    // Tokens can be stored under user_id (customer) OR linked via driver_id.
+    // A driver's device_token row has driver_id set and user_id NULL,
+    // so we join drivers to resolve the user_id -> driver_id mapping.
+    const res = await pool.query(
+      `SELECT dt.token FROM device_tokens dt
+       LEFT JOIN drivers d ON d.id = dt.driver_id
+       WHERE dt.user_id = $1 OR d.user_id = $1`,
+      [userId]
+    );
+    const tokens = res.rows.map(r => r.token);
+    if (tokens.length > 0) {
+      await sendPushNotification(tokens, { title, body, data });
+    }
+  } catch (err) {
+    console.error('[FCM] Error notifying user by userId:', err);
+  }
+}
+
+/**
+ * Wrapper: Notify all admin accounts.
+ * Finds all users with role='admin' and looks up their device tokens.
+ */
+async function notifyAdmins(title, body, data = {}) {
+  try {
+    // Get all admin user IDs
+    const adminRes = await pool.query("SELECT id FROM users WHERE role = 'admin'");
+    if (adminRes.rows.length === 0) return;
+    const adminIds = adminRes.rows.map(r => r.id);
+
+    // Find their device tokens (admins are stored under user_id)
+    const placeholders = adminIds.map((_, i) => `$${i + 1}`).join(',');
+    const tokRes = await pool.query(
+      `SELECT token FROM device_tokens WHERE user_id IN (${placeholders})`,
+      adminIds
+    );
+    const tokens = tokRes.rows.map(r => r.token);
+    if (tokens.length > 0) {
+      await sendPushNotification(tokens, { title, body, data });
+      console.log(`[FCM] Admin notification sent to ${tokens.length} admin devices.`);
+    }
+  } catch (err) {
+    console.error('[FCM] Error notifying admins:', err);
+  }
+}
+
 module.exports = {
   sendPushNotification,
   notifyUser,
   notifyDriver,
   notifyDrivers,
   notifyAllUsers,
+  notifyByUserId,
+  notifyAdmins,
 };

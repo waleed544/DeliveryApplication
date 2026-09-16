@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/db');
+const { notifyAdmins } = require('../services/notificationService');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'defaultsecret';
@@ -102,6 +103,13 @@ router.post('/register/commercial', [
 
     await client.query('COMMIT');
 
+    // Notify admins that a new commercial account is pending approval (fire-and-forget)
+    notifyAdmins(
+      '🏪 حساب تجاري جديد يحتاج موافقة',
+      `طلب تسجيل تجاري: ${business_name} — بتابعية ${name}`,
+      { type: 'commercial_approval' }
+    ).catch(() => {});
+
     res.status(201).json({
       message: 'تم تسجيل طلبك — سيتم تفعيل حسابك التجاري بعد موافقة المشرف'
     });
@@ -163,6 +171,13 @@ router.post('/register/driver', [
     await client.query('COMMIT');
 
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Notify admins that a new driver is pending approval (fire-and-forget)
+    notifyAdmins(
+      '🚗 سائق جديد يحتاج موافقة',
+      `طلب تسجيل سائق: ${name} — بانتظار موافقتك`,
+      { type: 'driver_approval' }
+    ).catch(() => {});
 
     res.status(201).json({
       token,

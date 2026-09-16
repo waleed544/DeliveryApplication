@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const db = require('../config/db');
 const socketManager = require('../socketManager');
+const { notifyByUserId } = require('../services/notificationService');
 const router = express.Router();
 
 router.use(authenticate);
@@ -89,8 +90,18 @@ router.post('/:chatId/messages', async (req, res) => {
         ? chat.participant_2_id
         : chat.participant_1_id;
 
-      // Emit to recipient's personal room
+      // Emit to recipient's personal room via Socket.IO (existing behaviour — unchanged)
       socketManager.emitChatMessage(chatId, recipientId, message);
+
+      // Also send a push notification so the recipient is alerted even when
+      // the app is closed or in the background (fire-and-forget, non-blocking)
+      const truncated = content.length > 80 ? content.substring(0, 80) + '…' : content;
+      notifyByUserId(
+        recipientId,
+        `💬 رسالة جديدة من ${req.user.name}`,
+        truncated,
+        { type: 'chat_message', chatId: String(chatId) }
+      ).catch(() => {});
     }
 
     res.status(201).json(message);
