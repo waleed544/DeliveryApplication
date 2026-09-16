@@ -1,6 +1,6 @@
 {
   "appId": "com.delivery.app",
-  "appName": "bclick",
+  "appName": "بكليك",
   "webDir": "../frontend/build",
   "plugins": {
     "PushNotifications": {

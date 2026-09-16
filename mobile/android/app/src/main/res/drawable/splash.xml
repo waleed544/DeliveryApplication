@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash screen drawable that centers the image without stretching.
+     The background color matches the image's green background. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background color matching the image -->
+    <item>
+        <color android:color="#7ED321"/>
+    </item>
+    <!-- Centered image, preserving aspect ratio (no stretch) -->
+    <item>
+        <bitmap
+            android:src="@drawable/splash_image"
+            android:gravity="center"
+            android:scaleType="fitCenter"/>
+    </item>
+</layer-list>
