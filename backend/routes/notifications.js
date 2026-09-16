@@ -27,7 +27,8 @@ router.post('/register-token', authenticate, async (req, res) => {
     let finalUserId = null;
     let finalDriverId = null;
 
-    if (type === 'customer') {
+    if (type === 'customer' || type === 'admin') {
+      // Both customers and admins store their token by user_id
       finalUserId = req.user.id;
     } else if (type === 'driver') {
       const driverResult = await pool.query('SELECT id FROM drivers WHERE user_id = $1', [req.user.id]);
