@@ -3,7 +3,7 @@ const { authenticate } = require('../middleware/auth');
 const db = require('../config/db');
 const { calculateLocationBasedPricing, calculatePromoDiscount } = require('../utils/calculations');
 const socketManager = require('../socketManager');
-const { notifyDrivers } = require('../services/notificationService');
+const { notifyDrivers, notifyAdmins } = require('../services/notificationService');
 const router = express.Router();
 
 router.use(authenticate);
@@ -180,6 +180,8 @@ router.post('/', async (req, res) => {
         });
         notifyDrivers(driverIds, 'طلب توصيل جديد', 'يوجد طلب توصيل جديد بالقرب منك، تفقده الآن!');
       }
+      // Notify all admins of the new order
+      notifyAdmins('🆕 طلب جديد', 'وصل طلب جديد يحتاج إلى المتابعة');
 
       return res.status(201).json({ message: 'Order created', order });
     }
@@ -276,6 +278,8 @@ router.post('/', async (req, res) => {
       });
       notifyDrivers(driverIds, 'طلب مشتريات جديد', 'يوجد طلب مشتريات جديد بالقرب منك، تفقده الآن!');
     }
+    // Notify all admins of the new order
+    notifyAdmins('🆕 طلب جديد', 'وصل طلب جديد يحتاج إلى المتابعة');
 
     res.status(201).json({ message: 'Order created', order });
   } catch (error) {
