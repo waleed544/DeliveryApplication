@@ -47,12 +47,15 @@ import AdminCommercialAccounts from './pages/admin/AdminCommercialAccounts';
 function App() {
   const { user, loading } = useAuth();
   const { isDark } = useTheme();
-  useAppPermissions(user);
+  const { tokenReady } = useAppPermissions(user);
 
-  if (loading) {
+  // Show spinner while auth is loading OR while waiting for FCM token to be saved
+  // (only blocks on native new devices — web and existing devices pass instantly)
+  if (loading || (user && !tokenReady)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+        {!loading && <p className="text-sm text-gray-500 dark:text-gray-400">جارٍ التحضير...</p>}
       </div>
     );
   }
