@@ -5,6 +5,14 @@
   "plugins": {
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "launchAutoHide": true,
+      "backgroundColor": "#7ED321",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "FIT_CENTER",
+      "showSpinner": false
     }
   }
 }
