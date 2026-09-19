@@ -475,10 +475,16 @@ router.get('/orders/:id', async (req, res) => {
 // Delete a single order
 router.delete('/orders/:id', async (req, res) => {
   try {
+    await db.query('BEGIN');
+    // Delete associated chats first (cascades to messages)
+    await db.query('DELETE FROM chats WHERE order_id = $1', [req.params.id]);
     const result = await db.query('DELETE FROM orders WHERE id = $1 RETURNING id, order_number', [req.params.id]);
+    await db.query('COMMIT');
+    
     if (!result.rows.length) return res.status(404).json({ message: 'الطلب غير موجود' });
     res.json({ message: `تم حذف الطلب ${result.rows[0].order_number}` });
   } catch (error) {
+    await db.query('ROLLBACK');
     res.status(500).json({ message: error.message });
   }
 });
@@ -486,9 +492,15 @@ router.delete('/orders/:id', async (req, res) => {
 // Delete ALL orders history
 router.delete('/orders', async (req, res) => {
   try {
+    await db.query('BEGIN');
+    // Delete all chats that are associated with an order
+    await db.query('DELETE FROM chats WHERE order_id IS NOT NULL');
     const result = await db.query('DELETE FROM orders RETURNING id');
+    await db.query('COMMIT');
+    
     res.json({ message: `تم حذف ${result.rows.length} طلب بنجاح` });
   } catch (error) {
+    await db.query('ROLLBACK');
     res.status(500).json({ message: error.message });
   }
 });
