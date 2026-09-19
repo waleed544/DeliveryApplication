@@ -854,4 +854,14 @@ router.get('/chats/:id/messages', async (req, res) => {
   }
 });
 
+// Delete all chat history
+router.delete('/chats', async (req, res) => {
+  try {
+    const result = await db.query('DELETE FROM chats RETURNING id');
+    res.json({ message: `تم حذف ${result.rows.length} محادثة بنجاح` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

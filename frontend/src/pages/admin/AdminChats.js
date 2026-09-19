@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
-import { Search, Info, Package, CheckCheck, User, MessageCircle } from 'lucide-react';
+import { Search, Info, Package, CheckCheck, User, MessageCircle, Trash2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminChats() {
@@ -13,6 +13,10 @@ export default function AdminChats() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchParams] = useSearchParams();
   const messagesEndRef = useRef(null);
+
+  // Delete state
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Read chat_id from URL query if present (e.g. from AdminOrders)
   const queryChatId = searchParams.get('chat_id');
@@ -60,6 +64,22 @@ export default function AdminChats() {
       .finally(() => setMessagesLoading(false));
   };
 
+  const handleDeleteAll = async () => {
+    setDeleting(true);
+    try {
+      const res = await api.delete('/admin/chats');
+      toast.success(res.data.message);
+      setChats([]);
+      setSelectedChat(null);
+      setMessages([]);
+      setShowDeleteAll(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'فشل حذف المحادثات');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const getParticipantInfo = (chat, pType) => {
     if (pType === 1) return { name: chat.participant_1_name, role: chat.participant_1_role, avatar: chat.participant_1_avatar };
     return { name: chat.participant_2_name, role: chat.participant_2_role, avatar: chat.participant_2_avatar };
@@ -92,7 +112,18 @@ export default function AdminChats() {
         {/* Sidebar - Chat List */}
         <div className={`w-full md:w-1/3 lg:w-1/4 flex flex-col border-l border-gray-100 dark:border-gray-700 ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">مراقبة المحادثات</h1>
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">مراقبة المحادثات</h1>
+              {chats.length > 0 && (
+                <button
+                  onClick={() => setShowDeleteAll(true)}
+                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                  title="حذف كل السجل"
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
@@ -274,6 +305,38 @@ export default function AdminChats() {
           )}
         </div>
       </div>
+
+      {/* Delete ALL confirmation modal */}
+      {showDeleteAll && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={24} className="text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-lg">حذف السجل</h3>
+                <p className="text-sm text-gray-500 mt-0.5">إجراء لا يمكن التراجع عنه</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 dark:text-gray-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-3">
+              ⚠️ سيتم حذف <strong>جميع المحادثات ({chats.length})</strong> بشكل دائم من النظام. هل أنت متأكد؟
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteAll(false)}
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold text-sm hover:bg-gray-200 transition-colors">
+                إلغاء
+              </button>
+              <button onClick={handleDeleteAll} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                {deleting
+                  ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <><Trash2 size={15} /> نعم، احذف الكل</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
