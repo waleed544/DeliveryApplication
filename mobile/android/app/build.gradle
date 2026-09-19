@@ -40,6 +40,8 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // HMS Push Kit — used on Huawei devices that have no Google Mobile Services
+    implementation 'com.huawei.hms:push:6.11.0.300'
 }
 
 apply from: 'capacitor.build.gradle'
@@ -51,4 +53,14 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
+
+// Apply HMS AGConnect plugin only when the Huawei config file is present
+try {
+    def agconnectJSON = file('agconnect-services.json')
+    if (agconnectJSON.exists() && agconnectJSON.text) {
+        apply plugin: 'com.huawei.agconnect'
+    }
+} catch(Exception e) {
+    logger.info("agconnect-services.json not found, HMS plugin not applied.")
 }

@@ -5,100 +5,182 @@ import { Geolocation } from '@capacitor/geolocation';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
-const FCM_TOKEN_KEY = 'bclick_fcm_token';
-// Safety timeout: if FCM never responds within this many ms, unblock the app anyway
+const FCM_TOKEN_KEY  = 'bclick_fcm_token';
+const HMS_TOKEN_KEY  = 'bclick_hms_token';
+// Safety timeout: unblock the app if FCM/HMS never responds within this many ms
 const TOKEN_WAIT_TIMEOUT_MS = 8000;
 
-// Send FCM token to backend. Returns true on success, false on failure.
-const sendTokenToBackend = async (token, user) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// Device-type detection
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns true when running on a Huawei device that has HMS Core but no Google
+ * Play Services.  On such devices FCM cannot work — we must use HMS Push Kit.
+ *
+ * Detection strategy (no native plugin required):
+ *   • User-agent contains "HUAWEI" or "HONOR"
+ *   • AND window.HMSPush is defined (injected by the HMS JS Bridge in WebView)
+ *   OR the cached HMS token key already exists in localStorage.
+ */
+function isHmsDevice() {
+  if (!Capacitor.isNativePlatform()) return false;
+  const ua = (navigator.userAgent || '').toUpperCase();
+  const huaweiUA = ua.includes('HUAWEI') || ua.includes('HONOR');
+  const hmsJsBridge = typeof window !== 'undefined' && !!window.HMSPush;
+  const cachedHmsToken = !!localStorage.getItem(HMS_TOKEN_KEY);
+  return (huaweiUA && hmsJsBridge) || cachedHmsToken;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Backend registration
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sends a token to the backend.
+ * @param {string} token   FCM or HMS token
+ * @param {string} provider 'fcm' | 'hms'
+ * @param {object} user    authenticated user object
+ * @returns {boolean}      true on success
+ */
+const sendTokenToBackend = async (token, provider, user) => {
   if (!token || !user) return false;
   try {
     await api.post('/notifications/register-token', {
       token,
+      provider,
       type: user.role || 'customer',
     });
-    console.log('[FCM] Token sent to backend OK, user:', user.id, 'role:', user.role);
+    console.log(`[Push] ${provider.toUpperCase()} token sent to backend. user=${user.id}`);
     return true;
   } catch (err) {
-    console.error('[FCM] Failed to send token to backend:', err?.response?.data || err.message);
+    console.error(`[Push] Failed to send ${provider} token:`, err?.response?.data || err.message);
     return false;
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HMS token retrieval (JS Bridge approach)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Retrieves the HMS push token via the HMS JS Bridge that Huawei injects into
+ * the WebView.  Falls back to a cached token if the bridge is unavailable.
+ */
+async function getHmsToken() {
+  // 1. Try HMS JS Bridge (available when @hmscore/react-native-hms-push or the
+  //    Capacitor HMS bridge is used).  We attempt it defensively.
+  try {
+    if (window.HMSPush && typeof window.HMSPush.getToken === 'function') {
+      const result = await window.HMSPush.getToken('');
+      if (result && result.result) return result.result;
+    }
+  } catch (e) {
+    console.warn('[HMS] JS Bridge getToken failed:', e.message);
+  }
+
+  // 2. Fall back to a token previously stored by HmsMessageService.java via
+  //    the Android SharedPreferences → localStorage bridge that some Capacitor
+  //    plugins expose.  We read from localStorage as the native service writes
+  //    there indirectly via the JSBridge postMessage mechanism.
+  const cached = localStorage.getItem(HMS_TOKEN_KEY);
+  if (cached) {
+    console.log('[HMS] Using cached HMS token from localStorage.');
+    return cached;
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * useAppPermissions
- * Returns { tokenReady } — a boolean that is:
- *   - true  immediately on web (no FCM needed)
- *   - true  immediately if this device already has a saved token in localStorage
- *   - false until the FCM token is successfully saved to the backend on a new device
- *   - true  after TOKEN_WAIT_TIMEOUT_MS as a safety fallback so the app never freezes
+ *
+ * Manages push-notification permissions and token registration for both:
+ *   - FCM  (Google devices with GMS)
+ *   - HMS  (Huawei devices without GMS)
+ *
+ * Returns { tokenReady } — false until the token is saved to the backend on
+ * a new device; true immediately for existing devices and on the web.
  */
 export const useAppPermissions = (user) => {
-  const setupDone = useRef(false);
-  const userRef = useRef(user);
+  const setupDone    = useRef(false);
+  const userRef      = useRef(user);
   const tokenReadyRef = useRef(false);
-  const setTokenReadyRef = useRef(null); // will hold the setter after mount
 
-  // On native: start as false if no cached token yet, true if already cached
   const alreadyCached = Capacitor.isNativePlatform()
-    ? !!localStorage.getItem(FCM_TOKEN_KEY)
-    : true; // Web never blocks
+    ? !!(localStorage.getItem(FCM_TOKEN_KEY) || localStorage.getItem(HMS_TOKEN_KEY))
+    : true;
 
   const [tokenReady, setTokenReady] = useState(alreadyCached);
 
-  // Keep refs in sync
-  useEffect(() => {
-    userRef.current = user;
-  });
-  useEffect(() => {
-    setTokenReadyRef.current = setTokenReady;
-  }, []);
+  useEffect(() => { userRef.current = user; });
 
   const markTokenReady = () => {
     if (!tokenReadyRef.current) {
       tokenReadyRef.current = true;
       setTokenReady(true);
-      console.log('[FCM] tokenReady = true — app unblocked.');
+      console.log('[Push] tokenReady = true — app unblocked.');
     }
   };
 
-  // ── When user logs in: send any cached token and re-trigger register() ────
+  // ── When user logs in ────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     if (!Capacitor.isNativePlatform()) return;
 
     const run = async () => {
-      const cached = localStorage.getItem(FCM_TOKEN_KEY);
-      if (cached) {
-        console.log('[FCM] User logged in, sending cached token to backend...');
-        const ok = await sendTokenToBackend(cached, user);
-        if (ok) markTokenReady();
-      }
-
-      // Safety timeout: unblock the app even if FCM never fires
+      // Safety timeout — never freeze the app
       const safetyTimer = setTimeout(() => {
-        console.warn('[FCM] Safety timeout reached — unblocking app.');
+        console.warn('[Push] Safety timeout — unblocking app.');
         markTokenReady();
       }, TOKEN_WAIT_TIMEOUT_MS);
 
-      // Always re-call register() to refresh token (handles reinstall / rotation)
-      setTimeout(async () => {
-        try {
-          const status = await PushNotifications.checkPermissions();
-          if (status.receive === 'granted') {
-            await PushNotifications.register();
-            console.log('[FCM] register() called after login to refresh token.');
-          } else {
-            // Permissions not granted — unblock immediately
+      const hms = isHmsDevice();
+
+      if (hms) {
+        // ── HMS path ───────────────────────────────────────────────────────
+        const cached = localStorage.getItem(HMS_TOKEN_KEY);
+        if (cached) {
+          const ok = await sendTokenToBackend(cached, 'hms', user);
+          if (ok) { clearTimeout(safetyTimer); markTokenReady(); return; }
+        }
+        // Try to get a fresh HMS token
+        const freshToken = await getHmsToken();
+        if (freshToken) {
+          localStorage.setItem(HMS_TOKEN_KEY, freshToken);
+          const ok = await sendTokenToBackend(freshToken, 'hms', user);
+          if (ok) { clearTimeout(safetyTimer); markTokenReady(); }
+        }
+        // HMS token will also arrive via HmsMessageService.java onNewToken →
+        // stored in localStorage → picked up on next app foreground
+      } else {
+        // ── FCM path ───────────────────────────────────────────────────────
+        const cached = localStorage.getItem(FCM_TOKEN_KEY);
+        if (cached) {
+          const ok = await sendTokenToBackend(cached, 'fcm', user);
+          if (ok) { clearTimeout(safetyTimer); markTokenReady(); }
+        }
+        // Always re-call register() to refresh token on reinstall / rotation
+        setTimeout(async () => {
+          try {
+            const status = await PushNotifications.checkPermissions();
+            if (status.receive === 'granted') {
+              await PushNotifications.register();
+            } else {
+              clearTimeout(safetyTimer);
+              markTokenReady();
+            }
+          } catch (e) {
+            console.warn('[FCM] register() on login failed:', e);
             clearTimeout(safetyTimer);
             markTokenReady();
           }
-        } catch (e) {
-          console.warn('[FCM] register() on login failed:', e);
-          clearTimeout(safetyTimer);
-          markTokenReady();
-        }
-      }, 500);
+        }, 500);
+      }
     };
 
     run();
@@ -119,14 +201,29 @@ export const useAppPermissions = (user) => {
       // 1. Location
       try {
         const locStatus = await Geolocation.checkPermissions();
-        if (locStatus.location !== 'granted') {
-          await Geolocation.requestPermissions();
-        }
+        if (locStatus.location !== 'granted') await Geolocation.requestPermissions();
       } catch (e) {
         console.warn('[Permissions] Location error:', e);
       }
 
       // 2. Push notifications
+      if (isHmsDevice()) {
+        // On HMS devices, HmsMessageService.java handles the token natively.
+        // We still request Android notification permission (Android 13+).
+        try {
+          const result = await PushNotifications.requestPermissions();
+          if (result.receive !== 'granted') {
+            console.warn('[HMS] Notification permission not granted.');
+          }
+        } catch (e) {
+          console.warn('[HMS] Permission request error:', e);
+        }
+        // Mark ready — token will arrive via HmsMessageService.java → localStorage
+        markTokenReady();
+        return;
+      }
+
+      // FCM path
       let pushGranted = false;
       try {
         const pushStatus = await PushNotifications.checkPermissions();
@@ -142,44 +239,41 @@ export const useAppPermissions = (user) => {
 
       if (!pushGranted) {
         console.warn('[FCM] Push permissions not granted.');
-        // No FCM available — don't block the app, just mark ready
         markTokenReady();
         return;
       }
 
-      await setupPushListeners();
+      await setupFcmListeners();
     } catch (error) {
       console.error('[Permissions] Unexpected error:', error);
-      markTokenReady(); // fallback — never freeze
+      markTokenReady();
     }
   };
 
-  const setupPushListeners = async () => {
+  const setupFcmListeners = async () => {
     try {
       await PushNotifications.removeAllListeners();
 
-      // CRITICAL: Add listener BEFORE calling register()
       PushNotifications.addListener('registration', async (token) => {
-        console.log('[FCM] registration event fired, token:', token.value);
+        console.log('[FCM] Token received:', token.value);
         localStorage.setItem(FCM_TOKEN_KEY, token.value);
         const currentUser = userRef.current;
         if (currentUser) {
-          const ok = await sendTokenToBackend(token.value, currentUser);
+          const ok = await sendTokenToBackend(token.value, 'fcm', currentUser);
           if (ok) markTokenReady();
         } else {
-          console.log('[FCM] No user yet, token cached in localStorage for after login.');
-          // Already cached — future login effect will send it
+          console.log('[FCM] No user yet — token cached for after login.');
         }
       });
 
       PushNotifications.addListener('registrationError', (err) => {
         console.error('[FCM] registrationError:', JSON.stringify(err));
-        markTokenReady(); // error — don't freeze the app
+        markTokenReady();
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         const title = notification.title || '';
-        const body = notification.body || '';
+        const body  = notification.body  || '';
         toast(`${title}${body ? '\n' + body : ''}`, { icon: '🔔', duration: 5000 });
       });
 
@@ -190,10 +284,37 @@ export const useAppPermissions = (user) => {
       await PushNotifications.register();
       console.log('[FCM] register() called successfully.');
     } catch (error) {
-      console.error('[FCM] setupPushListeners error:', error);
-      markTokenReady(); // error — don't freeze
+      console.error('[FCM] setupFcmListeners error:', error);
+      markTokenReady();
     }
   };
+
+  // ── Expose HMS token to JS from SharedPreferences (written by HmsMessageService.java) ──
+  // HmsMessageService writes to Android SharedPreferences "HmsPushPrefs".
+  // Capacitor bridges this via a postMessage on startup — we listen for it here.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const handleMessage = (event) => {
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (data && data.type === 'HMS_TOKEN' && data.token) {
+          console.log('[HMS] Token received from native bridge:', data.token);
+          localStorage.setItem(HMS_TOKEN_KEY, data.token);
+          const currentUser = userRef.current;
+          if (currentUser) {
+            sendTokenToBackend(data.token, 'hms', currentUser).then(ok => {
+              if (ok) markTokenReady();
+            });
+          }
+        }
+      } catch (e) { /* ignore non-JSON messages */ }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { tokenReady };
 };

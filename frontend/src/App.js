@@ -33,6 +33,7 @@ import DriverProfile from './pages/driver/DriverProfile';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminDrivers from './pages/admin/AdminDrivers';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminChats from './pages/admin/AdminChats';
 import AdminLocations from './pages/admin/AdminLocations';
 import AdminPricing from './pages/admin/AdminPricing';
 import AdminComplaints from './pages/admin/AdminComplaints';
@@ -93,6 +94,7 @@ function App() {
           <Route path="drivers" element={<AdminDrivers />} />
           <Route path="drivers/:id/balance" element={<AdminDriverBalance />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="chats" element={<AdminChats />} />
           <Route path="locations" element={<AdminLocations />} />
           <Route path="pricing" element={<AdminPricing />} />
           <Route path="place-options" element={<AdminPlaceOptions />} />

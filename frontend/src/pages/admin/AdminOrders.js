@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import { Eye, X, MapPin, Package, ShoppingCart, Trash2, AlertTriangle } from 'lucide-react';
+import { Eye, X, MapPin, Package, ShoppingCart, Trash2, AlertTriangle, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminOrders() {
@@ -10,6 +10,7 @@ export default function AdminOrders() {
   const [filter, setFilter] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const financialView = searchParams.get('financial');
 
   // Delete state
@@ -203,7 +204,17 @@ export default function AdminOrders() {
 
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">تفاصيل الطلب</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">تفاصيل الطلب</h3>
+                {selectedOrder?.chat_id && (
+                  <button 
+                    onClick={() => navigate(`/admin/chats?chat_id=${selectedOrder.chat_id}`)}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-primary-50 hover:bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:hover:bg-primary-900/50 dark:text-primary-300 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <MessageCircle size={16} /> عرض المحادثة
+                  </button>
+                )}
+              </div>
               <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><X size={20} /></button>
             </div>
 

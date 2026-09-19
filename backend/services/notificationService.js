@@ -2,237 +2,313 @@ const admin = require('firebase-admin');
 const { getMessaging } = require('firebase-admin/messaging');
 const path = require('path');
 const { pool } = require('../config/db');
+const https = require('https');
 
-// Initialize Firebase Admin using the service account file
+// ─────────────────────────────────────────────────────────────────────────────
+// Firebase Admin (FCM) initialisation
+// ─────────────────────────────────────────────────────────────────────────────
 let isFirebaseInitialized = false;
 
 try {
   let credential;
-  
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    // Use environment variable in production (Railway)
-    const serviceAccountJson = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    credential = admin.cert(serviceAccountJson);
+    credential = admin.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
   } else {
-    // Fallback to local file for development
     const serviceAccountPath = path.join(__dirname, '../firebase-service-account.json');
     credential = admin.cert(serviceAccountPath);
   }
-
-  admin.initializeApp({
-    credential: credential,
-  });
-  
+  admin.initializeApp({ credential });
   isFirebaseInitialized = true;
   console.log('Firebase Admin initialized successfully.');
 } catch (error) {
-  console.warn('Firebase Admin initialization skipped or failed. Notifications will not be sent.');
+  console.warn('Firebase Admin initialization skipped or failed. FCM notifications will not be sent.');
   console.error('Firebase Error Details:', error.message);
-  // Do not crash the app; this allows development/testing even if the user hasn't provided the credentials yet.
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HMS (Huawei Mobile Services) credentials
+// ─────────────────────────────────────────────────────────────────────────────
+const HMS_APP_ID     = process.env.HMS_APP_ID;
+const HMS_APP_SECRET = process.env.HMS_APP_SECRET;
+let hmsAccessToken   = null;
+let hmsTokenExpiry   = 0;
+
 /**
- * Sends a push notification to specific tokens and handles dead tokens.
- * @param {Array<string>} tokens - Array of FCM tokens
- * @param {Object} payload - { title, body, data }
+ * Obtains (and caches) an HMS OAuth2 access token.
+ * Huawei tokens expire in 3600s; we refresh 60s early.
  */
-async function sendPushNotification(tokens, payload) {
-  if (!isFirebaseInitialized || !tokens || tokens.length === 0) {
-    return;
+async function getHmsAccessToken() {
+  if (hmsAccessToken && Date.now() < hmsTokenExpiry - 60_000) return hmsAccessToken;
+
+  if (!HMS_APP_ID || !HMS_APP_SECRET) {
+    throw new Error('HMS_APP_ID / HMS_APP_SECRET env vars are not set.');
   }
 
-  const message = {
-    notification: {
-      title: payload.title,
-      body: payload.body,
-    },
-    data: payload.data || {},
-    tokens: tokens,
-    android: {
-      notification: {
-        sound: 'default'
-      }
-    }
-  };
+  const body = new URLSearchParams({
+    grant_type:    'client_credentials',
+    client_id:     HMS_APP_ID,
+    client_secret: HMS_APP_SECRET,
+  }).toString();
 
-  try {
-    const response = await getMessaging().sendEachForMulticast(message);
-    
-    // Check for failed tokens (expired, unregistered, etc.) and remove them from the database
-    const failedTokens = [];
-    response.responses.forEach((resp, idx) => {
-      if (!resp.success) {
-        const errorCode = resp.error?.code;
-        if (
-          errorCode === 'messaging/invalid-registration-token' ||
-          errorCode === 'messaging/registration-token-not-registered'
-        ) {
-          failedTokens.push(tokens[idx]);
-        }
-      }
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'oauth-login.cloud.huawei.com',
+      path:     '/oauth2/v3/token',
+      method:   'POST',
+      headers:  { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }, res => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (!json.access_token) {
+             console.error('[HMS] Failed to obtain access token from Huawei OAuth2');
+             return reject(new Error('HMS token error'));
+          }
+          hmsAccessToken = json.access_token;
+          hmsTokenExpiry = Date.now() + (json.expires_in || 3600) * 1000;
+          resolve(hmsAccessToken);
+        } catch (e) { reject(e); }
+      });
     });
-
-    if (failedTokens.length > 0) {
-      await removeDeadTokens(failedTokens);
-    }
-    
-    return response;
-  } catch (error) {
-    console.error('Error sending push notification:', error);
-  }
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
 }
 
 /**
- * Removes invalid tokens from the database.
+ * Sends an HMS push notification to an array of Huawei RegIDs.
+ * Returns an array of failed/invalid tokens for cleanup.
  */
+async function sendHmsNotification(tokens, payload) {
+  if (!tokens || tokens.length === 0) return [];
+  if (!HMS_APP_ID || !HMS_APP_SECRET) {
+    console.warn('[HMS] Credentials not set — skipping HMS notification.');
+    return [];
+  }
+
+  let accessToken;
+  try {
+    accessToken = await getHmsAccessToken();
+  } catch (e) {
+    console.error('[HMS] Could not obtain access token:', e.message);
+    return [];
+  }
+
+  const body = JSON.stringify({
+    validate_only: false,
+    message: {
+      notification: {
+        title: payload.title,
+        body:  payload.body,
+      },
+      android: {
+        notification: {
+          title:              payload.title,
+          body:               payload.body,
+          default_sound:      true,
+          importance:         'HIGH',
+          foreground_show:    true,
+        },
+      },
+      token: tokens,   // up to 500 tokens per call
+      data:  JSON.stringify(payload.data || {}),
+    },
+  });
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'push-api.cloud.huawei.com',
+      path:     `/v1/${HMS_APP_ID}/messages:send`,
+      method:   'POST',
+      headers:  {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    }, res => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          console.log(`[HMS] sending to ${tokens.length} tokens. Response code: ${json.code}`);
+          // code 80000000 = success; other codes indicate failures
+          if (json.code !== '80000000') {
+            console.warn(`[HMS] Non-success response code: ${json.code}, message: ${json.msg || 'unknown'}`);
+          }
+        } catch (e) {
+          console.error('[HMS] Response parse error:', e.message);
+        }
+        resolve([]); // HMS batch failures handled separately
+      });
+    });
+    req.on('error', e => {
+      console.error('[HMS] Request error:', e.message);
+      resolve([]);
+    });
+    req.write(body);
+    req.end();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FCM helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function removeDeadTokens(tokens) {
+  if (!tokens || tokens.length === 0) return;
   try {
     const placeholders = tokens.map((_, i) => `$${i + 1}`).join(',');
     await pool.query(`DELETE FROM device_tokens WHERE token IN (${placeholders})`, tokens);
-    console.log(`Removed ${tokens.length} dead tokens from database.`);
+    console.log(`[FCM] Removed ${tokens.length} dead token(s).`);
   } catch (error) {
     console.error('Error removing dead tokens:', error);
   }
 }
 
-/**
- * Gets FCM tokens for a specific user (Customer)
- */
-async function getUserTokens(userId) {
+async function sendFcmNotification(tokens, payload) {
+  if (!isFirebaseInitialized || !tokens || tokens.length === 0) return;
+
+  const message = {
+    notification: { title: payload.title, body: payload.body },
+    data:    payload.data || {},
+    tokens,
+    android: { notification: { sound: 'default' } },
+  };
+
   try {
-    const res = await pool.query('SELECT token FROM device_tokens WHERE user_id = $1', [userId]);
-    return res.rows.map(r => r.token);
-  } catch (err) {
-    console.error('Error fetching user tokens:', err);
-    return [];
+    console.log(`[FCM] sending to ${tokens.length} tokens.`);
+    const response = await getMessaging().sendEachForMulticast(message);
+    const failedTokens = [];
+    response.responses.forEach((resp, idx) => {
+      if (!resp.success) {
+        const code = resp.error?.code;
+        if (
+          code === 'messaging/invalid-registration-token' ||
+          code === 'messaging/registration-token-not-registered'
+        ) {
+          failedTokens.push(tokens[idx]);
+        }
+      }
+    });
+    console.log(`[FCM] Successfully sent: ${response.successCount}, Failed: ${response.failureCount}`);
+    if (failedTokens.length > 0) await removeDeadTokens(failedTokens);
+    return response;
+  } catch (error) {
+    console.error('[FCM] Error sending notification:', error);
   }
 }
 
-/**
- * Gets FCM tokens for a specific driver
- */
-async function getDriverTokens(driverId) {
-  try {
-    const res = await pool.query('SELECT token FROM device_tokens WHERE driver_id = $1', [driverId]);
-    return res.rows.map(r => r.token);
-  } catch (err) {
-    console.error('Error fetching driver tokens:', err);
-    return [];
-  }
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Core dispatcher — splits tokens by provider and routes accordingly
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Wrapper: Notify a user (Customer)
+ * Sends a push notification to a set of device_token rows.
+ * Each row must have { token, provider }.
  */
+async function dispatchNotification(rows, payload) {
+  const fcmTokens = rows.filter(r => r.provider !== 'hms').map(r => r.token);
+  const hmsTokens = rows.filter(r => r.provider === 'hms').map(r => r.token);
+
+  const tasks = [];
+  if (fcmTokens.length > 0) tasks.push(sendFcmNotification(fcmTokens, payload));
+  if (hmsTokens.length > 0) tasks.push(sendHmsNotification(hmsTokens, payload));
+  await Promise.all(tasks);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public wrappers (same API as before — no callers need to change)
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function notifyUser(userId, title, body, data = {}) {
-  const tokens = await getUserTokens(userId);
-  if (tokens.length > 0) {
-    await sendPushNotification(tokens, { title, body, data });
+  try {
+    const res = await pool.query(
+      'SELECT token, provider FROM device_tokens WHERE user_id = $1', [userId]
+    );
+    await dispatchNotification(res.rows, { title, body, data });
+  } catch (err) {
+    console.error('[Notify] notifyUser error:', err);
   }
 }
 
-/**
- * Wrapper: Notify a driver
- */
 async function notifyDriver(driverId, title, body, data = {}) {
-  const tokens = await getDriverTokens(driverId);
-  if (tokens.length > 0) {
-    await sendPushNotification(tokens, { title, body, data });
+  try {
+    const res = await pool.query(
+      'SELECT token, provider FROM device_tokens WHERE driver_id = $1', [driverId]
+    );
+    await dispatchNotification(res.rows, { title, body, data });
+  } catch (err) {
+    console.error('[Notify] notifyDriver error:', err);
   }
 }
 
-/**
- * Wrapper: Notify multiple drivers
- */
 async function notifyDrivers(driverIds, title, body, data = {}) {
   if (!driverIds || driverIds.length === 0) return;
   try {
     const placeholders = driverIds.map((_, i) => `$${i + 1}`).join(',');
-    const res = await pool.query(`SELECT token FROM device_tokens WHERE driver_id IN (${placeholders})`, driverIds);
-    const tokens = res.rows.map(r => r.token);
-    if (tokens.length > 0) {
-      await sendPushNotification(tokens, { title, body, data });
-    }
+    const res = await pool.query(
+      `SELECT token, provider FROM device_tokens WHERE driver_id IN (${placeholders})`,
+      driverIds
+    );
+    await dispatchNotification(res.rows, { title, body, data });
   } catch (err) {
-    console.error('Error fetching multiple driver tokens:', err);
+    console.error('[Notify] notifyDrivers error:', err);
   }
 }
 
-/**
- * Wrapper: Notify ALL users and drivers (broadcast)
- * Used for site-wide events like new ads or service downtime.
- */
 async function notifyAllUsers(title, body, data = {}) {
   try {
-    const res = await pool.query('SELECT token FROM device_tokens');
-    const tokens = res.rows.map(r => r.token);
-    if (tokens.length > 0) {
-      await sendPushNotification(tokens, { title, body, data });
-      console.log(`[FCM] Broadcast sent to ${tokens.length} devices.`);
-    }
+    const res = await pool.query('SELECT token, provider FROM device_tokens');
+    await dispatchNotification(res.rows, { title, body, data });
+    console.log(`[Notify] Broadcast sent to ${res.rows.length} device(s).`);
   } catch (err) {
-    console.error('[FCM] Error broadcasting notification:', err);
+    console.error('[Notify] notifyAllUsers error:', err);
   }
 }
 
-/**
- * Wrapper: Notify a user by their users.id (user_id)
- * Works for both customers and drivers — searches both columns.
- * Used for chat notifications where the recipient could be either role.
- */
 async function notifyByUserId(userId, title, body, data = {}) {
   try {
-    // Tokens can be stored under user_id (customer) OR linked via driver_id.
-    // A driver's device_token row has driver_id set and user_id NULL,
-    // so we join drivers to resolve the user_id -> driver_id mapping.
     const res = await pool.query(
-      `SELECT dt.token FROM device_tokens dt
+      `SELECT dt.token, dt.provider FROM device_tokens dt
        LEFT JOIN drivers d ON d.id = dt.driver_id
        WHERE dt.user_id = $1 OR d.user_id = $1`,
       [userId]
     );
-    const tokens = res.rows.map(r => r.token);
-    if (tokens.length > 0) {
-      await sendPushNotification(tokens, { title, body, data });
-    }
+    await dispatchNotification(res.rows, { title, body, data });
   } catch (err) {
-    console.error('[FCM] Error notifying user by userId:', err);
+    console.error('[Notify] notifyByUserId error:', err);
   }
 }
 
-/**
- * Wrapper: Notify all admin accounts.
- * Finds all users with role='admin' and looks up their device tokens.
- */
 async function notifyAdmins(title, body, data = {}) {
   try {
-    // Get all admin user IDs
     const adminRes = await pool.query("SELECT id FROM users WHERE role = 'admin'");
     if (adminRes.rows.length === 0) return;
     const adminIds = adminRes.rows.map(r => r.id);
-
-    // Find their device tokens (admins are stored under user_id)
     const placeholders = adminIds.map((_, i) => `$${i + 1}`).join(',');
     const tokRes = await pool.query(
-      `SELECT token FROM device_tokens WHERE user_id IN (${placeholders})`,
+      `SELECT token, provider FROM device_tokens WHERE user_id IN (${placeholders})`,
       adminIds
     );
-    const tokens = tokRes.rows.map(r => r.token);
-    if (tokens.length > 0) {
-      await sendPushNotification(tokens, { title, body, data });
-      console.log(`[FCM] Admin notification sent to ${tokens.length} admin devices.`);
-    }
+    await dispatchNotification(tokRes.rows, { title, body, data });
+    console.log(`[Notify] Admin notification sent to ${tokRes.rows.length} admin device(s).`);
   } catch (err) {
-    console.error('[FCM] Error notifying admins:', err);
+    console.error('[Notify] notifyAdmins error:', err);
   }
 }
 
 module.exports = {
-  sendPushNotification,
+  sendFcmNotification,
+  sendHmsNotification,
   notifyUser,
   notifyDriver,
   notifyDrivers,
   notifyAllUsers,
   notifyByUserId,
   notifyAdmins,
+  // legacy alias kept for backward-compatibility
+  sendPushNotification: sendFcmNotification,
 };
