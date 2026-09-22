@@ -1,5 +1,9 @@
 node_modules
 .env
 database.sqlite
-uploads
 *.log
+test_*.js
+check_*.js
+migrate_*.js
+run_migration.js
+setup.js
