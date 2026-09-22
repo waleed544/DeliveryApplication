@@ -13,6 +13,7 @@ import AdminLayout from './components/admin/AdminLayout';
 import Login from './pages/common/Login';
 import Register from './pages/common/Register';
 import Landing from './pages/common/Landing';
+import DeleteAccount from './pages/common/DeleteAccount';
 import ChatWindow from './components/common/ChatWindow';
 
 // Customer
@@ -67,6 +68,8 @@ function App() {
         <Route path="/" element={!user ? <Landing /> : <Navigate to={`/${user.role}`} />} />
         <Route path="/login" element={!user ? <Login /> : <Navigate to={`/${user.role}`} />} />
         <Route path="/register" element={!user ? <Register /> : <Navigate to={`/${user.role}`} />} />
+        {/* Public page — required by Google Play data deletion policy */}
+        <Route path="/delete-account" element={<DeleteAccount />} />
 
         {/* Chat - accessible to customer and driver */}
         <Route path="/chat/:orderId" element={user?.role === 'customer' || user?.role === 'driver' ? <ChatWindow /> : <Navigate to="/login" />} />

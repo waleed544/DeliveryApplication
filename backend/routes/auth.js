@@ -286,4 +286,75 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// ── Public account deletion (required by Google Play) ────────────────────────
+// POST /auth/delete-account
+// Anyone can request deletion by providing their phone + password.
+// The entire user record and all associated data is permanently removed.
+router.post('/delete-account', async (req, res) => {
+  const { phone, password } = req.body;
+  if (!phone || !password) {
+    return res.status(400).json({ message: 'رقم الهاتف وكلمة المرور مطلوبان' });
+  }
+
+  const client = await db.pool.connect();
+  try {
+    // Verify identity
+    const userRes = await client.query(
+      'SELECT * FROM users WHERE phone = $1',
+      [phone.trim()]
+    );
+    if (!userRes.rows.length) {
+      return res.status(404).json({ message: 'لم يتم العثور على حساب بهذا الرقم' });
+    }
+    const user = userRes.rows[0];
+
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'كلمة المرور غير صحيحة' });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({ message: 'لا يمكن حذف حساب المشرف من هنا' });
+    }
+
+    await client.query('BEGIN');
+
+    // Delete device tokens
+    await client.query('DELETE FROM device_tokens WHERE user_id = $1', [user.id]);
+
+    // Delete chats & messages
+    await client.query('DELETE FROM chats WHERE participant_1_id = $1 OR participant_2_id = $1', [user.id]);
+
+    if (user.role === 'customer') {
+      const custRes = await client.query('SELECT id FROM customers WHERE user_id = $1', [user.id]);
+      if (custRes.rows.length) {
+        const customerId = custRes.rows[0].id;
+        // Nullify orders (keep history but remove customer link)
+        await client.query('UPDATE orders SET customer_id = NULL WHERE customer_id = $1', [customerId]);
+        await client.query('DELETE FROM customers WHERE id = $1', [customerId]);
+      }
+    } else if (user.role === 'driver') {
+      const drvRes = await client.query('SELECT id FROM drivers WHERE user_id = $1', [user.id]);
+      if (drvRes.rows.length) {
+        const driverId = drvRes.rows[0].id;
+        await client.query('UPDATE orders SET driver_id = NULL WHERE driver_id = $1', [driverId]);
+        await client.query('DELETE FROM driver_payouts WHERE driver_id = $1', [driverId]);
+        await client.query('DELETE FROM drivers WHERE id = $1', [driverId]);
+      }
+    }
+
+    // Delete the user
+    await client.query('DELETE FROM users WHERE id = $1', [user.id]);
+
+    await client.query('COMMIT');
+
+    res.json({ message: 'تم حذف حسابك بنجاح. نأسف لمغادرتك!' });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    res.status(500).json({ message: 'حدث خطأ أثناء حذف الحساب. يرجى المحاولة مرة أخرى.' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
