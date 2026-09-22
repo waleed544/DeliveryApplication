@@ -1,4 +1,4 @@
-package com.delivery.app;
+package com.bclick.delivery;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;

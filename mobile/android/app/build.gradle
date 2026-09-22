@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.delivery.app"
+    namespace = "com.bclick.delivery"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.delivery.app"
+        applicationId "com.bclick.delivery"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

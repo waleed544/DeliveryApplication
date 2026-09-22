@@ -103,7 +103,16 @@ router.post('/', authorize('admin'), async (req, res) => {
       await reindexDeliveryPrices();
     }
 
-    const finalRes = await db.query('SELECT * FROM delivery_route_prices WHERE id = $1', [newItem.id]);
+    const finalRes = await db.query(
+      `SELECT drp.*, 
+        fl.name_ar as from_name_ar, fl.name_en as from_name_en,
+        tl.name_ar as to_name_ar,   tl.name_en as to_name_en
+       FROM delivery_route_prices drp
+       JOIN locations fl ON drp.from_location_id = fl.id
+       JOIN locations tl ON drp.to_location_id   = tl.id
+       WHERE drp.id = $1`,
+      [newItem.id]
+    );
     res.status(201).json(finalRes.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ message: 'هذا المسار موجود بالفعل' });
@@ -131,7 +140,16 @@ router.put('/:id', authorize('admin'), async (req, res) => {
       await reindexDeliveryPrices();
     }
 
-    const finalRes = await db.query('SELECT * FROM delivery_route_prices WHERE id = $1', [req.params.id]);
+    const finalRes = await db.query(
+      `SELECT drp.*, 
+        fl.name_ar as from_name_ar, fl.name_en as from_name_en,
+        tl.name_ar as to_name_ar,   tl.name_en as to_name_en
+       FROM delivery_route_prices drp
+       JOIN locations fl ON drp.from_location_id = fl.id
+       JOIN locations tl ON drp.to_location_id   = tl.id
+       WHERE drp.id = $1`,
+      [req.params.id]
+    );
     res.json(finalRes.rows[0]);
   } catch (err) {
     res.status(500).json({ message: err.message });
